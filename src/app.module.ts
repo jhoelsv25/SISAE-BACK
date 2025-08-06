@@ -1,9 +1,28 @@
 import { Module } from '@nestjs/common';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import { AuthModule } from './auth/auth.module';
+import configurationConfig from './config/configuration.config';
+import { getDatabaseConfig } from './config/database.config';
+import { FeatureModule } from './features/features.module';
+import { HealthModule } from './health/health.module';
 
 @Module({
-  imports: [],
+  imports: [
+    ConfigModule.forRoot({
+      isGlobal: true,
+      load: [configurationConfig],
+    }),
+    TypeOrmModule.forRootAsync({
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => getDatabaseConfig(configService),
+    }),
+    HealthModule,
+    FeatureModule,
+    AuthModule,
+  ],
   controllers: [AppController],
   providers: [AppService],
 })
