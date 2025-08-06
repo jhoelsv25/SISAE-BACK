@@ -1,0 +1,57 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+build/
+
+# Coverage reports
+coverage/
+
+# Environment files
+.env
+.env.*
+
+# Database files
+*.db
+*.sqlite
+
+# Logs
+*.log
+logs/
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Temporary files
+*.tmp
+*.temp
+
+# Package manager files
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Docker
+Dockerfile
+docker-compose*.yml
+
+# Git
+.git/
+.gitignore
+
+# Documentation that should preserve formatting
+CHANGELOG.md
+LICENSE
+
+# Generated files
+*.generated.*
+*.min.*
+
+# Scripts that might have specific formatting
+scripts/*.sh
