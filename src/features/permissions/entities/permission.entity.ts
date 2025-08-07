@@ -1,6 +1,5 @@
 import { BaseEntity } from 'common/entities/base.entity';
 import { Action } from 'features/actions/entities/action.entity';
-import { Module } from 'features/modules/entities/module.entity';
 import { Column, Entity, ManyToOne } from 'typeorm';
 
 @Entity('permissions')
@@ -12,11 +11,11 @@ export class Permission extends BaseEntity {
   })
   name: string;
 
-  @ManyToOne(() => Module, {
+  @ManyToOne('Module', {
     nullable: false,
     onDelete: 'RESTRICT',
   })
-  module: Module;
+  module: any;
 
   @Column({
     type: 'varchar',
