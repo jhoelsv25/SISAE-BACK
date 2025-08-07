@@ -1,10 +1,16 @@
-import { Logger, ValidationPipe } from '@nestjs/common';
+import {
+  BadRequestException,
+  ClassSerializerInterceptor,
+  Logger,
+  ValidationPipe,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { NestFactory } from '@nestjs/core';
+import { NestFactory, Reflector } from '@nestjs/core';
 import { SwaggerModule } from '@nestjs/swagger';
 import helmet from 'helmet';
 import { DataSource } from 'typeorm';
 import { AppModule } from './app.module';
+import { AuditInterceptor } from './audit/interceptors/audit.interceptor';
 import { corsConfig } from './config/cors.config';
 import { swaggerConfig } from './config/swagger.config';
 
@@ -40,6 +46,19 @@ async function bootstrap() {
       whitelist: true, // Elimina propiedades no definidas en el DTO
       forbidNonWhitelisted: true, // Lanza un error si hay propiedades no definidas en el DTO
       transform: true, // Transforma los payloads a los tipos definidos en los DTOs
+      disableErrorMessages: false, // Mostrar mensajes de error detallados
+      exceptionFactory: errors => {
+        const logger = new Logger('ValidationPipe');
+        logger.error('Validation errors:', JSON.stringify(errors, null, 2));
+        return new BadRequestException({
+          message: 'Datos de entrada inválidos',
+          errors: errors.map(error => ({
+            property: error.property,
+            value: error.value,
+            constraints: error.constraints,
+          })),
+        });
+      },
     }),
   );
 
@@ -48,6 +67,18 @@ async function bootstrap() {
     helmet({
       contentSecurityPolicy: true, // Configura la política de seguridad de contenido
     }),
+  );
+  // Interceptor setup
+  const reflector = app.get(Reflector);
+  const dataSource = app.get(DataSource);
+
+  // Configurar serialización global
+  app.useGlobalInterceptors(
+    new ClassSerializerInterceptor(reflector, {
+      strategy: 'exposeAll',
+      enableImplicitConversion: true,
+    }),
+    new AuditInterceptor(dataSource, reflector),
   );
 
   //swagger setup
