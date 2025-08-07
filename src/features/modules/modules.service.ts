@@ -1,26 +1,100 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { ErrorHandler } from '../../common/exceptions';
 import { CreateModuleDto } from './dto/create-module.dto';
 import { UpdateModuleDto } from './dto/update-module.dto';
+import { Module as ModuleEntity } from './entities/module.entity';
 
 @Injectable()
 export class ModulesService {
-  create(createModuleDto: CreateModuleDto) {
-    return 'This action adds a new module';
+  private readonly logger = new Logger(ModulesService.name);
+
+  constructor(
+    @InjectRepository(ModuleEntity)
+    private modulesRepository: Repository<ModuleEntity>,
+  ) {}
+
+  async create(dto: CreateModuleDto) {
+    try {
+      // Ejemplo de validación de duplicados
+      const existingModule = await this.modulesRepository.findOne({
+        where: { name: dto.name },
+      });
+
+      if (existingModule) {
+        throw new ErrorHandler('Módulo ya existe', 400);
+      }
+
+      const module = this.modulesRepository.create(dto);
+      const savedModule = await this.modulesRepository.save(module);
+      return savedModule;
+    } catch (error) {
+      throw new ErrorHandler(error.message, error.status);
+    }
   }
 
-  findAll() {
-    return `This action returns all modules`;
+  async findAll() {
+    try {
+      const page = 1;
+      const limit = 10;
+      this.logger.log(`Finding all modules with pagination: page=${page}, limit=${limit}`);
+
+      return await this.modulesRepository
+        .createQueryBuilder('module')
+        .skip((page - 1) * limit)
+        .take(limit)
+        .getMany();
+    } catch (error) {
+      ErrorHandler.database(error, 'ModulesService.findAll');
+    }
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} module`;
+  async findOne(id: string) {
+    try {
+      const module = await this.modulesRepository.findOneBy({ id });
+      return ErrorHandler.validateExists(module, 'Módulo', id);
+    } catch (error) {
+      throw new ErrorHandler(error.message, error.status);
+    }
   }
 
-  update(id: number, updateModuleDto: UpdateModuleDto) {
-    return `This action updates a #${id} module`;
+  async update(id: string, updateModuleDto: UpdateModuleDto) {
+    try {
+      // Verificar que existe
+      await this.findOne(id);
+
+      // Verificar duplicados si se está actualizando el nombre
+      if (updateModuleDto.name) {
+        const existingModule = await this.modulesRepository.findOne({
+          where: { name: updateModuleDto.name },
+        });
+
+        if (existingModule && existingModule.id !== id) {
+          throw new ErrorHandler('Módulo con este nombre ya existe', 400);
+        }
+      }
+
+      await this.modulesRepository.update(id, updateModuleDto);
+      return await this.findOne(id);
+    } catch (error) {
+      throw new ErrorHandler(error.message, error.status);
+    }
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} module`;
+  async remove(id: string) {
+    try {
+      const module = await this.findOne(id);
+
+      // Ejemplo de validación de regla de negocio
+      if (module.children && module.children.length > 0) {
+        throw new ErrorHandler('No se puede eliminar un módulo con submódulos', 400);
+      }
+
+      await this.modulesRepository.delete(id);
+      return { message: 'Módulo eliminado correctamente' };
+    } catch (error) {
+      throw new ErrorHandler(error.message, error.status);
+    }
   }
 }
