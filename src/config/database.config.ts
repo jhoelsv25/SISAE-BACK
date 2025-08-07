@@ -1,5 +1,7 @@
 import { ConfigService } from '@nestjs/config';
 import { TypeOrmModuleOptions } from '@nestjs/typeorm';
+import { SnakeNamingStrategy } from 'typeorm-naming-strategies';
+import { AuditSubscriber } from '../audit/subscribers/audit.subscriber';
 
 export const getDatabaseConfig = (configService: ConfigService): TypeOrmModuleOptions => ({
   type: 'postgres',
@@ -14,7 +16,9 @@ export const getDatabaseConfig = (configService: ConfigService): TypeOrmModuleOp
   logger: 'simple-console', // Logger simple solo para errores
   migrations: [__dirname + '/../migrations/*{.ts,.js}'],
   migrationsRun: false,
+  subscribers: [AuditSubscriber],
   ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+  namingStrategy: new SnakeNamingStrategy(),
   extra: {
     // Configuraciones adicionales de PostgreSQL
     timezone: 'UTC',
