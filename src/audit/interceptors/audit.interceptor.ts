@@ -20,7 +20,6 @@ export class AuditInterceptor implements NestInterceptor {
 
     return next.handle().pipe(
       tap(async response => {
-        // Puedes personalizar esto según el tipo de acción
         const action =
           method === 'POST'
             ? 'CREATE'
