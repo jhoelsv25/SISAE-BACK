@@ -1,5 +1,6 @@
 import { BaseEntity } from 'common/entities/base.entity';
 import { Column, Entity, ManyToOne, OneToMany } from 'typeorm';
+import { Permission } from '../../permissions/entities/permission.entity';
 
 @Entity('modules')
 export class Module extends BaseEntity {
@@ -17,12 +18,10 @@ export class Module extends BaseEntity {
   description?: string;
 
   @Column({
-    type: 'varchar',
-    length: 100,
-    nullable: false,
-    unique: true,
+    type: 'int',
+    default: 0,
   })
-  code: string;
+  position: number;
 
   @Column({
     type: 'varchar',
@@ -49,4 +48,9 @@ export class Module extends BaseEntity {
     cascade: true,
   })
   children: Module[];
+
+  @OneToMany(() => Permission, permission => permission.module, {
+    cascade: true,
+  })
+  permissions: Permission[];
 }
