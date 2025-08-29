@@ -48,11 +48,9 @@ async function bootstrap() {
       transform: true, // Transforma los payloads a los tipos definidos en los DTOs
       disableErrorMessages: false, // Mostrar mensajes de error detallados
       exceptionFactory: errors => {
-        const logger = new Logger('ValidationPipe');
-        logger.error('Validation errors:', JSON.stringify(errors, null, 2));
         return new BadRequestException({
           message: 'Datos de entrada inválidos',
-          errors: errors.map(error => ({
+          details: errors.map(error => ({
             property: error.property,
             value: error.value,
             constraints: error.constraints,
