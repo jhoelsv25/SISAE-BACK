@@ -1,5 +1,5 @@
 import { BaseEntity } from 'common/entities/base.entity';
-import { Column, Entity, ManyToOne } from 'typeorm';
+import { Column, Entity, JoinTable, ManyToMany, ManyToOne } from 'typeorm';
 import { Module } from '../../modules/entities/module.entity';
 import { Role } from '../../roles/entities/role.entity';
 
@@ -25,9 +25,7 @@ export class Permission extends BaseEntity {
   })
   module: Module;
 
-  @ManyToOne(() => Role, role => role.permissions, {
-    nullable: false,
-    onDelete: 'CASCADE',
-  })
+  @ManyToMany(() => Role, role => role.permissions)
+  @JoinTable()
   roles: Role[];
 }
