@@ -56,8 +56,8 @@ export class User extends BaseEntity {
 
   @ManyToOne(() => Role, role => role.users, {
     eager: true,
-    nullable: false,
+    nullable: true,
     onDelete: 'RESTRICT',
   })
-  role: Role;
+  role?: Role;
 }

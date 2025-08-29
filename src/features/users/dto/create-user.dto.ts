@@ -80,6 +80,7 @@ export class CreateUserDto {
     description: 'ID del rol asignado al usuario',
     example: 'f47ac10b-58cc-4372-a567-0e02b2c3d479',
   })
+  @IsOptional()
   @IsUUID(4, { message: 'El ID del rol debe ser un UUID válido' })
-  roleId: string;
+  roleId?: string;
 }
