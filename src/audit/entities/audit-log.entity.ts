@@ -10,8 +10,8 @@ export class AuditLog extends BaseEntity {
   @Column({ type: 'varchar', length: 255 })
   entity: string;
 
-  @Column({ type: 'uuid' })
-  entityId: string;
+  @Column({ type: 'uuid', nullable: true })
+  entityId: string | null;
 
   @Column({ type: 'json', nullable: true })
   before: any;
