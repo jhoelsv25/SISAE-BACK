@@ -17,7 +17,6 @@ export class ModulesService {
 
   async create(dto: CreateModuleDto) {
     try {
-      // Ejemplo de validación de duplicados
       const existingModule = await this.modulesRepository.findOne({
         where: { name: dto.name },
       });
@@ -61,10 +60,8 @@ export class ModulesService {
 
   async update(id: string, updateModuleDto: UpdateModuleDto) {
     try {
-      // Verificar que existe
       await this.findOne(id);
 
-      // Verificar duplicados si se está actualizando el nombre
       if (updateModuleDto.name) {
         const existingModule = await this.modulesRepository.findOne({
           where: { name: updateModuleDto.name },
@@ -85,8 +82,6 @@ export class ModulesService {
   async remove(id: string) {
     try {
       const module = await this.findOne(id);
-
-      // Ejemplo de validación de regla de negocio
       if (module.children && module.children.length > 0) {
         throw new ErrorHandler('No se puede eliminar un módulo con submódulos', 400);
       }

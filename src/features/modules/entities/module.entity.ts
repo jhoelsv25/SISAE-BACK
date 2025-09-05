@@ -40,7 +40,6 @@ export class Module extends BaseEntity {
   @ManyToOne(() => Module, module => module.children, {
     nullable: true,
     onDelete: 'SET NULL',
-    eager: true,
   })
   parent: Module | null;
 
