@@ -44,7 +44,12 @@ export class UserCrudService {
       if (createUserDto.password) {
         createUserDto.password = await hashPassword(createUserDto.password);
       }
-      const user = this.userRepository.create(createUserDto);
+      console.log('Creating user:', createUserDto);
+      const user = this.userRepository.create({
+        ...createUserDto,
+        role: createUserDto.roleId ? { id: createUserDto.roleId } : undefined,
+      });
+      console.log('User entity created:', user);
       const { password, ...res } = await this.userRepository.save(user);
       return { message: 'El usuario ha sido creado exitosamente', data: res };
     } catch (error) {
@@ -139,7 +144,17 @@ export class UserCrudService {
       return await this.userRepository.findOne({
         where: { username },
         relations: ['role'],
-        select: ['id', 'username', 'email', 'password', 'isActive', 'lastLogin'],
+        select: [
+          'id',
+          'username',
+          'email',
+          'password',
+          'isActive',
+          'lastLogin',
+          'firstName',
+          'lastName',
+          'profilePicture',
+        ],
       });
     } catch (error) {
       throw new ErrorHandler(error.message, error.status);

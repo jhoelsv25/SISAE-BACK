@@ -49,10 +49,6 @@ export class CreateUserDto {
   @IsString({ message: 'La contraseña debe ser una cadena de texto' })
   @MinLength(8, { message: 'La contraseña debe tener al menos 8 caracteres' })
   @MaxLength(100, { message: 'La contraseña no puede tener más de 100 caracteres' })
-  @Matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/, {
-    message:
-      'La contraseña debe contener al menos una mayúscula, una minúscula, un número y un carácter especial',
-  })
   password: string;
 
   @ApiProperty({
@@ -83,4 +79,26 @@ export class CreateUserDto {
   @IsOptional()
   @IsUUID(4, { message: 'El ID del rol debe ser un UUID válido' })
   roleId?: string;
+
+  @ApiProperty({
+    description: 'Nombre(s) del usuario',
+    example: 'Juan Carlos',
+    minLength: 2,
+    maxLength: 100,
+  })
+  @IsString({ message: 'El nombre debe ser una cadena de texto' })
+  @MinLength(2, { message: 'El nombre debe tener al menos 2 caracteres' })
+  @MaxLength(100, { message: 'El nombre no puede tener más de 100 caracteres' })
+  firstName: string;
+
+  @ApiProperty({
+    description: 'Apellido(s) del usuario',
+    example: 'Pérez Gómez',
+    minLength: 2,
+    maxLength: 100,
+  })
+  @IsString({ message: 'El apellido debe ser una cadena de texto' })
+  @MinLength(2, { message: 'El apellido debe tener al menos 2 caracteres' })
+  @MaxLength(100, { message: 'El apellido no puede tener más de 100 caracteres' })
+  lastName: string;
 }
