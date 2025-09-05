@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { comparePassword } from '../common/utils/password.util';
+import { RoleService } from '../features/roles/services/role.service';
 import { UsersService } from '../features/users/users.service';
 import { LoginDto } from './dto/login.dto';
 import { PayloadAuth } from './interfaces/payload.interface';
@@ -10,7 +11,13 @@ export class AuthService {
   constructor(
     private readonly userService: UsersService,
     private readonly jwtService: JwtService,
+    private readonly roleService: RoleService,
   ) {}
+
+  async getModulesByRole(roleId: string): Promise<any> {
+    return this.roleService.getModulesAndPermissionsByRoleId(roleId);
+  }
+
   async login(loginDto: LoginDto) {
     const { username, password } = loginDto;
     // Buscar usuario por username
@@ -36,10 +43,11 @@ export class AuthService {
       message: 'Inicio de sesión exitoso, bienvenido ' + user.username,
       data: {
         user: {
-          id: user.id,
-          username: user.username,
-          email: user.email,
-          role: user.role?.name || null,
+          ...user,
+          role: {
+            id: user.role?.id || null,
+            name: user.role?.name || null,
+          },
         },
         accessToken,
         refreshToken,

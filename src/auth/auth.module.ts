@@ -2,10 +2,11 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
-import { TypeOrmModule } from '@nestjs/typeorm';
 import { jwtConfig } from '../config/jwt.config';
-import { User } from '../features/users/entities/user.entity';
+import { RolesModule } from '../features/roles/roles.module';
+import { RoleService } from '../features/roles/services/role.service';
 import { UsersModule } from '../features/users/users.module';
+import { UsersService } from '../features/users/users.service';
 import { AuthCookieService } from './auth-cookie.service';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
@@ -16,8 +17,8 @@ import { JwtStrategy } from './strategies/jwt.strategy';
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     PassportModule,
-    TypeOrmModule.forFeature([User]),
     UsersModule,
+    RolesModule,
     JwtModule.registerAsync({
       global: true,
       imports: [ConfigModule],
@@ -26,6 +27,6 @@ import { JwtStrategy } from './strategies/jwt.strategy';
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy, AuthCookieService],
+  providers: [AuthService, JwtStrategy, AuthCookieService, UsersService, RoleService],
 })
 export class AuthModule {}

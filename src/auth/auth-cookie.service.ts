@@ -3,7 +3,7 @@ import { Response } from 'express';
 
 @Injectable()
 export class AuthCookieService {
-  setAuthCookies(res: Response, accessToken: string, refreshToken: string) {
+  async setAuthCookies(res: Response, accessToken: string, refreshToken: string) {
     res.cookie('accessToken', accessToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
@@ -18,7 +18,7 @@ export class AuthCookieService {
     });
   }
 
-  clearAuthCookies(res: Response) {
+  async clearAuthCookies(res: Response) {
     res.clearCookie('accessToken');
     res.clearCookie('refreshToken');
   }

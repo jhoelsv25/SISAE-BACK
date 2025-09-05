@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, Req, Res } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Req, Res } from '@nestjs/common';
 import { Request, Response } from 'express';
 import { AuthCookieService } from './auth-cookie.service';
 import { AuthService } from './auth.service';
@@ -15,8 +15,8 @@ export class AuthController {
   async login(@Body() loginDto: LoginDto, @Res() res: Response) {
     const result = await this.authService.login(loginDto);
     const { accessToken, refreshToken, user } = result.data;
-    this.authCookieService.setAuthCookies(res, accessToken, refreshToken);
-    return res.json({ message: result.message, user, accessToken, refreshToken });
+    await this.authCookieService.setAuthCookies(res, accessToken, refreshToken);
+    res.json({ message: result.message, user, accessToken });
   }
 
   @Get('refresh')
@@ -27,12 +27,17 @@ export class AuthController {
     }
     const result = await this.authService.refresh(refreshToken);
     this.authCookieService.setAuthCookies(res, result.accessToken, refreshToken);
-    return res.json({ message: result.message });
+    res.json({ message: result.message });
   }
 
   @Get('logout')
   async logout(@Res() res: Response) {
     this.authCookieService.clearAuthCookies(res);
-    return res.json(await this.authService.logout());
+    res.json(await this.authService.logout());
+  }
+
+  @Get('modules/:id')
+  async getModulesByRole(@Param('id') roleId: string) {
+    return await this.authService.getModulesByRole(roleId);
   }
 }
