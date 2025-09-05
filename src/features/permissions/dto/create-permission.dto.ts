@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
-import { IsString, IsUUID, Matches, MaxLength, MinLength } from 'class-validator';
+import { IsString, IsUUID, MaxLength, MinLength } from 'class-validator';
 
 export class CreatePermissionDto {
   @ApiProperty({
@@ -16,19 +16,15 @@ export class CreatePermissionDto {
   name: string;
 
   @ApiProperty({
-    description: 'Código único del permiso en formato MODULE.ACTION',
-    example: 'USERS.CREATE',
-    minLength: 3,
-    maxLength: 100,
+    description: 'Acción que representa el permiso',
+    example: 'create',
+    enum: ['create', 'read', 'update', 'delete'],
   })
-  @IsString({ message: 'El código del permiso debe ser una cadena de texto' })
-  @MinLength(3, { message: 'El código del permiso debe tener al menos 3 caracteres' })
-  @MaxLength(100, { message: 'El código del permiso no puede tener más de 100 caracteres' })
-  @Matches(/^[A-Z_]+\.[A-Z_]+$/, {
-    message: 'El código debe seguir el formato MODULO.ACCION (ej: USERS.CREATE)',
-  })
-  @Transform(({ value }) => value?.toUpperCase()?.trim())
-  code: string;
+  @IsString({ message: 'La acción del permiso debe ser una cadena de texto' })
+  @MinLength(2, { message: 'La acción del permiso debe tener al menos 2 caracteres' })
+  @MaxLength(10, { message: 'La acción del permiso no puede tener más de 10 caracteres' })
+  @Transform(({ value }) => value?.trim().toLowerCase())
+  action: 'create' | 'read' | 'update' | 'delete';
 
   @ApiProperty({
     description: 'ID del módulo al que pertenece el permiso',
@@ -36,11 +32,4 @@ export class CreatePermissionDto {
   })
   @IsUUID(4, { message: 'El ID del módulo debe ser un UUID válido' })
   moduleId: string;
-
-  @ApiProperty({
-    description: 'ID de la acción que define el permiso',
-    example: 'e47ac10b-58cc-4372-a567-0e02b2c3d480',
-  })
-  @IsUUID(4, { message: 'El ID de la acción debe ser un UUID válido' })
-  actionId: string;
 }
