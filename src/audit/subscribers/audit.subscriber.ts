@@ -30,7 +30,7 @@ export class AuditSubscriber implements EntitySubscriberInterface {
       await repo.save({
         userId: event.queryRunner?.data?.userId || null,
         entity: event.metadata.name,
-        entityId: event.entity.id,
+        entityId: event.entity.id || null,
         before: null,
         after: event.entity,
         action: 'CREATE',
