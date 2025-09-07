@@ -103,11 +103,22 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       }),
     };
 
-    // Log del error
-    this.logger.error(
-      `${request.method} ${request.url} - Status: ${status} - Error: ${message}`,
-      exception instanceof Error ? exception.stack : exception,
-    );
+    // Log del error solo si no es 404 y estamos en desarrollo
+    if (status !== HttpStatus.NOT_FOUND || process.env.NODE_ENV === 'development') {
+      if (process.env.NODE_ENV === 'development') {
+        this.logger.error(
+          `${request.method} ${request.url} - Status: ${status} - Error: ${message}`,
+          exception instanceof Error ? exception.stack : exception,
+        );
+      } else {
+        // En producción, solo log básico para errores no-404
+        if (status !== HttpStatus.NOT_FOUND) {
+          this.logger.error(
+            `${request.method} ${request.url} - Status: ${status} - Error: ${message}`,
+          );
+        }
+      }
+    }
 
     response.status(status).json(errorResponse);
   }

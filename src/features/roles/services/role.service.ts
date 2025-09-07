@@ -1,4 +1,4 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ErrorHandler } from '../../../common/exceptions';
@@ -27,82 +27,90 @@ export class RoleService {
       children?: Array<any>;
     }>;
   }> {
-    const role = await this.roleRepository.findOne({
-      where: { id: roleId },
-      relations: ['permissions', 'permissions.module', 'permissions.module.parent'],
-    });
-    if (!role) throw new NotFoundException('Rol no encontrado');
+    try {
+      const role = await this.roleRepository.findOne({
+        where: { id: roleId },
+        relations: ['permissions', 'permissions.module', 'permissions.module.parent'],
+      });
 
-    interface ModuleTree {
-      id: string;
-      name: string;
-      description?: string;
-      path?: string;
-      icon?: string;
-      permissions: string[];
-      children: ModuleTree[];
-      parentId: string | null;
-    }
-
-    // First, organize modules by their IDs
-    const modulesMap: Record<string, ModuleTree> = {};
-
-    // First pass: Create all module objects with their base properties
-    for (const perm of role.permissions) {
-      const module = perm.module;
-      if (!module) continue;
-
-      if (!modulesMap[module.id]) {
-        modulesMap[module.id] = {
-          id: module.id,
-          name: module.name,
-          description: module.description,
-          path: module.path?.startsWith('/') ? module.path : `/${module.path}`,
-          icon: module.icon,
-          permissions: [],
-          children: [],
-          parentId: module.parent?.id || null,
-        };
+      if (!role) {
+        throw new ErrorHandler('Rol no encontrado', HttpStatus.NOT_FOUND);
       }
-      modulesMap[module.id].permissions.push(perm.action);
-    }
 
-    // Build the tree structure recursively
-    const buildTree = (parentId: string | null): ModuleTree[] => {
-      return Object.values(modulesMap)
-        .filter(module => module.parentId === parentId)
-        .map(module => ({
-          ...module,
-          children: buildTree(module.id),
-        }));
-    };
+      interface ModuleTree {
+        id: string;
+        name: string;
+        description?: string;
+        path?: string;
+        icon?: string;
+        permissions: string[];
+        children: ModuleTree[];
+        parentId: string | null;
+      }
 
-    // Get root modules (those without parent) and build their trees
-    const rootModules = buildTree(null);
+      // First, organize modules by their IDs
+      const modulesMap: Record<string, ModuleTree> = {};
 
-    // Clean up function to remove parentId and empty children arrays recursively
-    const cleanModule = (module: ModuleTree) => {
-      const { parentId, children, ...rest } = module;
-      const cleaned: any = { ...rest };
+      // First pass: Create all module objects with their base properties
+      for (const perm of role.permissions) {
+        const module = perm.module;
+        if (!module) continue;
 
-      if (children && children.length > 0) {
-        // Recursively clean child modules
-        cleaned.children = children.map(cleanModule).filter(child => {
-          // Only include children that have permissions or their own children
-          return child.permissions.length > 0 || (child.children && child.children.length > 0);
-        });
-
-        // If after filtering there are no children, don't include the children property
-        if (cleaned.children.length === 0) {
-          delete cleaned.children;
+        if (!modulesMap[module.id]) {
+          modulesMap[module.id] = {
+            id: module.id,
+            name: module.name,
+            description: module.description,
+            path: module.path?.startsWith('/') ? module.path : `/${module.path}`,
+            icon: module.icon,
+            permissions: [],
+            children: [],
+            parentId: module.parent?.id || null,
+          };
         }
+        modulesMap[module.id].permissions.push(perm.action);
       }
-      return cleaned;
-    };
 
-    const modules = rootModules.map(cleanModule);
-    return { role: { id: role.id, name: role.name }, modules };
+      // Build the tree structure recursively
+      const buildTree = (parentId: string | null): ModuleTree[] => {
+        return Object.values(modulesMap)
+          .filter(module => module.parentId === parentId)
+          .map(module => ({
+            ...module,
+            children: buildTree(module.id),
+          }));
+      };
+
+      // Get root modules and build their trees
+      const rootModules = buildTree(null);
+
+      // Clean up function to remove parentId and empty children arrays
+      const cleanModule = (module: ModuleTree) => {
+        const { parentId, children, ...rest } = module;
+        const cleaned: any = { ...rest };
+
+        if (children && children.length > 0) {
+          cleaned.children = children.map(cleanModule).filter(child => {
+            return child.permissions.length > 0 || (child.children && child.children.length > 0);
+          });
+
+          if (cleaned.children.length === 0) {
+            delete cleaned.children;
+          }
+        }
+        return cleaned;
+      };
+
+      const modules = rootModules.map(cleanModule);
+      return { role: { id: role.id, name: role.name }, modules };
+    } catch (error) {
+      ErrorHandler.handle(error, 'RoleService.getModulesAndPermissions', {
+        resource: 'Rol',
+        id: roleId,
+      });
+    }
   }
+
   async create(dto: CreateRoleDto) {
     try {
       const { permissionIds, ...rest } = dto;
@@ -113,9 +121,9 @@ export class RoleService {
       return this.roleRepository.save(role);
     } catch (error) {
       if (error.code === '23505') {
-        throw new ConflictException('El nombre del rol ya existe');
+        throw new ErrorHandler('El nombre del rol ya existe', HttpStatus.CONFLICT);
       }
-      throw new ErrorHandler(error.message, error.status);
+      throw new ErrorHandler(error.message, HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 
@@ -126,7 +134,7 @@ export class RoleService {
   async findOne(id: string): Promise<Role> {
     const role = await this.roleRepository.findOne({ where: { id } });
     if (!role) {
-      throw new NotFoundException('Rol no encontrado');
+      throw new ErrorHandler('Rol no encontrado', HttpStatus.NOT_FOUND);
     }
     return role;
   }
@@ -138,23 +146,19 @@ export class RoleService {
         ...dto,
       });
       if (!role) {
-        throw new NotFoundException('Rol no encontrado');
+        throw new ErrorHandler('Rol no encontrado', HttpStatus.NOT_FOUND);
       }
-      return this.roleRepository.save(role);
+      return await this.roleRepository.save(role);
     } catch (error) {
       if (error.code === '23505') {
-        throw new ConflictException('El nombre del rol ya existe');
+        throw new ErrorHandler('El nombre del rol ya existe', HttpStatus.CONFLICT);
       }
-      throw new ErrorHandler(error.message, error.status);
+      throw new ErrorHandler(error.message, HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 
   async remove(id: string): Promise<void> {
-    try {
-      const role = await this.findOne(id);
-      await this.roleRepository.remove(role);
-    } catch (error) {
-      throw error;
-    }
+    const role = await this.findOne(id);
+    await this.roleRepository.remove(role);
   }
 }

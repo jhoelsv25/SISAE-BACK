@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common';
 import { CreateModuleDto } from './dto/create-module.dto';
 import { UpdateModuleDto } from './dto/update-module.dto';
 import { ModulesService } from './modules.service';
@@ -14,8 +14,8 @@ export class ModulesController {
   }
 
   @Get()
-  async findAll() {
-    return await this.modulesService.findAll();
+  async findAll(@Query('page') page: number = 1, @Query('size') size: number = 10) {
+    return await this.modulesService.findAll(+page, +size);
   }
 
   @Get(':id')

@@ -2,8 +2,7 @@ import { HttpException, HttpStatus, Logger } from '@nestjs/common';
 import { EntityNotFoundError, QueryFailedError } from 'typeorm';
 
 /**
- * Clase para manejo centralizado de errores que extiende HttpException
- * Se puede usar directamente como excepción o con métodos estáticos
+ * Manejador de errores centralizado
  */
 export class ErrorHandler extends HttpException {
   private static readonly logger = new Logger(ErrorHandler.name);
@@ -13,154 +12,82 @@ export class ErrorHandler extends HttpException {
   }
 
   /**
-   * Maneja errores de recursos no encontrados
+   * Método único para manejar todos los tipos de errores
+   * @param error El error a manejar
+   * @param context El contexto donde ocurrió el error (ej: 'UserService.create')
+   * @param extraData Datos adicionales para el mensaje de error
    */
-  static notFound(resource: string, id?: string | number): never {
-    this.logger.warn(`Resource not found: ${resource} ${id ? `with ID ${id}` : ''}`);
-    const message = id ? `${resource} con ID ${id} no encontrado` : `${resource} no encontrado`;
+  static handle(error: any, context?: string, extraData?: any): never {
+    let status = HttpStatus.INTERNAL_SERVER_ERROR;
+    let message = 'Error interno del servidor';
 
-    throw new ErrorHandler(message, HttpStatus.NOT_FOUND);
-  }
+    // Log del contexto si existe
+    const contextStr = context ? ` en ${context}` : '';
 
-  /**
-   * Maneja errores de lógica de negocio
-   */
-  static businessLogic(message: string): never {
-    this.logger.warn(`Business logic error: ${message}`);
-    throw new ErrorHandler(message, HttpStatus.BAD_REQUEST);
-  }
-
-  /**
-   * Maneja errores de duplicación
-   */
-  static duplicateResource(resource: string, field: string, value: any): never {
-    this.logger.warn(`Duplicate resource: ${resource} with ${field} = ${value}`);
-    const message = `Ya existe un ${resource} con ${field}: ${value}`;
-    throw new ErrorHandler(message, HttpStatus.CONFLICT);
-  }
-
-  /**
-   * Maneja errores de validación
-   */
-  static validation(message: string = 'Datos de entrada inválidos'): never {
-    this.logger.warn(`Validation error: ${message}`);
-    throw new ErrorHandler(message, HttpStatus.BAD_REQUEST);
-  }
-
-  /**
-   * Maneja errores de autorización
-   */
-  static unauthorized(message: string = 'No autorizado'): never {
-    this.logger.warn(`Unauthorized access: ${message}`);
-    throw new ErrorHandler(message, HttpStatus.UNAUTHORIZED);
-  }
-
-  /**
-   * Maneja errores de acceso denegado
-   */
-  static forbidden(message: string = 'Acceso denegado'): never {
-    this.logger.warn(`Forbidden access: ${message}`);
-    throw new ErrorHandler(message, HttpStatus.FORBIDDEN);
-  }
-
-  /**
-   * Maneja errores de base de datos con análisis automático
-   */
-  static database(error: any, context?: string): never {
-    this.logger.error(
-      `Database error${context ? ` in ${context}` : ''}: ${error.message}`,
-      error.stack,
-    );
-
-    // Manejo específico de errores de TypeORM
+    // Manejo de errores de base de datos
     if (error instanceof QueryFailedError) {
       const pgError = error.driverError as any;
       if (pgError?.code) {
         switch (pgError.code) {
-          case '23505': // Violación de restricción única
-            const detail = pgError.detail || '';
-            const match = detail.match(/Key \(([^)]+)\)=\(([^)]+)\)/);
-            if (match) {
-              const field = match[1];
-              const value = match[2];
-              this.duplicateResource('registro', field, value);
-            }
-            throw new ErrorHandler('El registro ya existe', HttpStatus.CONFLICT);
-          case '23503': // Violación de clave foránea
-            throw new ErrorHandler('Referencia a registro inexistente', HttpStatus.BAD_REQUEST);
-          case '23502': // Violación de NOT NULL
-            throw new ErrorHandler('Campo requerido faltante', HttpStatus.BAD_REQUEST);
-          case '42P01': // Tabla no existe
-            throw new ErrorHandler('Recurso no encontrado', HttpStatus.NOT_FOUND);
+          case '23505': // Duplicado
+            status = HttpStatus.CONFLICT;
+            message = 'El registro ya existe';
+            break;
+          case '23503': // FK violation
+            status = HttpStatus.BAD_REQUEST;
+            message = 'Referencia a registro inexistente';
+            break;
+          case '23502': // Not null
+            status = HttpStatus.BAD_REQUEST;
+            message = 'Campo requerido faltante';
+            break;
+          default:
+            message = 'Error en la base de datos';
         }
       }
     }
-
-    if (error instanceof EntityNotFoundError) {
-      throw new ErrorHandler('Registro no encontrado', HttpStatus.NOT_FOUND);
+    // Manejo de recurso no encontrado
+    else if (error instanceof EntityNotFoundError || error?.status === HttpStatus.NOT_FOUND) {
+      status = HttpStatus.NOT_FOUND;
+      message = extraData?.id
+        ? `${extraData.resource || 'Registro'} con ID ${extraData.id} no encontrado`
+        : `${extraData?.resource || 'Registro'} no encontrado`;
+    }
+    // Manejo de errores HTTP existentes
+    else if (error instanceof HttpException) {
+      status = error.getStatus();
+      message = error.message;
+    }
+    // Manejo de errores de validación
+    else if (error?.name === 'ValidationError') {
+      status = HttpStatus.BAD_REQUEST;
+      message = 'Datos de entrada inválidos';
+    }
+    // Si el error tiene un mensaje, usarlo
+    else if (error?.message) {
+      message = error.message;
     }
 
-    // Error genérico de base de datos
-    throw new ErrorHandler('Error en la base de datos', HttpStatus.INTERNAL_SERVER_ERROR);
-  }
-
-  /**
-   * Maneja errores genéricos
-   */
-  static generic(error: any, context?: string): never {
-    const message = error.message || 'Error desconocido';
-    this.logger.error(`Generic error${context ? ` in ${context}` : ''}: ${message}`, error.stack);
-
-    // Re-throw si ya es una excepción HTTP
-    if (error instanceof HttpException) {
-      throw error;
+    // Log del error
+    if (status >= HttpStatus.INTERNAL_SERVER_ERROR) {
+      this.logger.error(`Error${contextStr}: ${message}`, error.stack);
+    } else if (status >= HttpStatus.BAD_REQUEST) {
+      this.logger.warn(`Warning${contextStr}: ${message}`);
+    } else {
+      this.logger.log(`Info${contextStr}: ${message}`);
     }
 
-    throw new ErrorHandler('Error interno del servidor', HttpStatus.INTERNAL_SERVER_ERROR);
+    // Lanzar el error con formato estandarizado
+    throw new ErrorHandler(message, status);
   }
 
   /**
-   * Registra un error sin lanzar excepción
+   * Helper para validar existencia de recursos
    */
-  static logError(error: any, context?: string): void {
-    const message = error.message || 'Error desconocido';
-    this.logger.error(`Error${context ? ` in ${context}` : ''}: ${message}`, error.stack);
-  }
-
-  /**
-   * Registra una advertencia
-   */
-  static logWarning(message: string, context?: string): void {
-    this.logger.warn(`Warning${context ? ` in ${context}` : ''}: ${message}`);
-  }
-
-  /**
-   * Registra información
-   */
-  static logInfo(message: string, context?: string): void {
-    this.logger.log(`Info${context ? ` in ${context}` : ''}: ${message}`);
-  }
-
-  /**
-   * Método de conveniencia para validar que un recurso existe
-   */
-  static validateExists<T>(
-    resource: T | null | undefined,
-    resourceName: string,
-    id?: string | number,
-  ): T {
-    if (!resource) {
-      this.notFound(resourceName, id);
+  static validateExists<T>(value: T | null | undefined, resource: string, id?: string): T {
+    if (!value) {
+      this.handle(new Error('Not Found'), undefined, { resource, id });
     }
-    return resource as T;
-  }
-
-  /**
-   * Método de conveniencia para validar condiciones de negocio
-   */
-  static validateBusinessRule(condition: boolean, message: string): void {
-    if (!condition) {
-      this.businessLogic(message);
-    }
+    return value as T;
   }
 }

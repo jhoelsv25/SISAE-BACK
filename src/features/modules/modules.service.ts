@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ErrorHandler } from '../../common/exceptions';
@@ -33,19 +33,24 @@ export class ModulesService {
     }
   }
 
-  async findAll() {
+  async findAll(page: number = 1, size: number = 10) {
     try {
-      const page = 1;
-      const limit = 10;
-      this.logger.log(`Finding all modules with pagination: page=${page}, limit=${limit}`);
+      this.logger.log(`Finding all modules with pagination: page=${page}, size=${size}`);
 
-      return await this.modulesRepository
+      const [data, total] = await this.modulesRepository
         .createQueryBuilder('module')
-        .skip((page - 1) * limit)
-        .take(limit)
-        .getMany();
+        .skip((page - 1) * size)
+        .take(size)
+        .getManyAndCount();
+
+      return {
+        data,
+        page,
+        size,
+        total,
+      };
     } catch (error) {
-      ErrorHandler.database(error, 'ModulesService.findAll');
+      throw new ErrorHandler('Error al obtener los módulos', HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 

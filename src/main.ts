@@ -12,6 +12,7 @@ import helmet from 'helmet';
 import { DataSource } from 'typeorm';
 import { AppModule } from './app.module';
 import { AuditInterceptor } from './audit/interceptors/audit.interceptor';
+import { GlobalExceptionFilter } from './common/exceptions/http-exception.filter';
 import { corsConfig } from './config/cors.config';
 import { swaggerConfig } from './config/swagger.config';
 
@@ -40,6 +41,9 @@ async function bootstrap() {
 
   //cookie parser setup
   app.use(cookieParser());
+
+  // Exception filter setup
+  app.useGlobalFilters(new GlobalExceptionFilter());
 
   //prefix setup
   app.setGlobalPrefix('api');
