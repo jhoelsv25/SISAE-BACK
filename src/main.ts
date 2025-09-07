@@ -7,6 +7,7 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { NestFactory, Reflector } from '@nestjs/core';
 import { SwaggerModule } from '@nestjs/swagger';
+import * as cookieParser from 'cookie-parser';
 import helmet from 'helmet';
 import { DataSource } from 'typeorm';
 import { AppModule } from './app.module';
@@ -36,6 +37,9 @@ async function bootstrap() {
 
   //CORS setup
   app.enableCors(corsConfig(configService));
+
+  //cookie parser setup
+  app.use(cookieParser());
 
   //prefix setup
   app.setGlobalPrefix('api');

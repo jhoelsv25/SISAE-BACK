@@ -58,16 +58,30 @@ export class AuthService {
   async refresh(refreshToken: string) {
     try {
       const payload = this.jwtService.verify(refreshToken);
-      // Puedes agregar lógica para validar el refreshToken en base de datos si lo deseas
+      const user = await this.userService.findOne(payload.sub);
+      if (!user) {
+        throw new UnauthorizedException('Usuario no encontrado');
+      }
+
       const newAccessToken = this.jwtService.sign({
-        sub: payload.sub,
-        username: payload.username,
-        email: payload.email,
-        role: payload.role,
+        sub: user.id,
+        username: user.username,
+        email: user.email,
+        role: user.role?.name || null,
       });
+
       return {
         message: 'Token renovado',
-        accessToken: newAccessToken,
+        data: {
+          user: {
+            ...user,
+            role: {
+              id: user.role?.id || null,
+              name: user.role?.name || null,
+            },
+          },
+          accessToken: newAccessToken,
+        },
       };
     } catch (error) {
       throw new UnauthorizedException('Refresh token inválido o expirado');

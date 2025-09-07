@@ -57,7 +57,7 @@ export class RoleService {
           id: module.id,
           name: module.name,
           description: module.description,
-          path: module.path,
+          path: module.path?.startsWith('/') ? module.path : `/${module.path}`,
           icon: module.icon,
           permissions: [],
           children: [],

@@ -19,15 +19,21 @@ export class AuthController {
     res.json({ message: result.message, user, accessToken });
   }
 
-  @Get('refresh')
+  @Post('refresh-token')
   async refresh(@Req() req: Request, @Res() res: Response) {
+    console.log('Cookies recibidas:', req.cookies);
     const refreshToken = req.cookies?.refreshToken;
     if (!refreshToken) {
-      return res.status(401).json({ message: 'No se proporcionó el refresh token' });
+      return res.status(401).json({
+        message: 'No se proporcionó el refresh token',
+        cookies: req.cookies,
+        headers: req.headers,
+      });
     }
     const result = await this.authService.refresh(refreshToken);
-    this.authCookieService.setAuthCookies(res, result.accessToken, refreshToken);
-    res.json({ message: result.message });
+    const { accessToken } = result.data;
+    await this.authCookieService.setAuthCookies(res, accessToken, refreshToken);
+    res.json(result);
   }
 
   @Get('logout')
