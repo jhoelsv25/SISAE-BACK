@@ -1,164 +1,48 @@
-import { HttpStatus, Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { ErrorHandler } from '../../../common/exceptions';
-import { PermissionEntity } from '../../permissions/entities/permission.entity';
+import { Injectable } from '@nestjs/common';
 import { CreateRoleDto } from '../dto/create-role.dto';
-import { RoleEntity } from '../entities/role.entity';
+import { FilterRoleDto } from '../dto/filte-role.dto';
+import { UpdateRoleDto } from '../dto/update-role.dto';
+import {
+  CreateRoleUseCase,
+  GetModulesAndPermissionsByRoleIdUseCase,
+  GetRoleByIdUseCase,
+  GetRolesUseCase,
+  RemoveRoleUseCase,
+  UpdateRoleUseCase,
+} from '../use-cases';
 
 @Injectable()
 export class RoleService {
   constructor(
-    @InjectRepository(RoleEntity)
-    private readonly roleRepository: Repository<RoleEntity>,
-    @InjectRepository(PermissionEntity)
-    private readonly permissionRepository: Repository<PermissionEntity>,
+    private readonly getModulesAndPermissionsByRoleIdUseCase: GetModulesAndPermissionsByRoleIdUseCase,
+    private readonly createUseCase: CreateRoleUseCase,
+    private readonly updateUseCase: UpdateRoleUseCase,
+    private readonly deleteUseCase: RemoveRoleUseCase,
+    private readonly getAllUseCase: GetRolesUseCase,
+    private readonly getByIdUseCase: GetRoleByIdUseCase,
   ) {}
 
-  async getModulesAndPermissionsByRoleId(roleId: string): Promise<{
-    role: { id: string; name: string };
-    modules: Array<{
-      id: string;
-      name: string;
-      description?: string;
-      path?: string;
-      icon?: string;
-      permissions: string[];
-      children?: Array<any>;
-    }>;
-  }> {
-    try {
-      const role = await this.roleRepository.findOne({
-        where: { id: roleId },
-        relations: ['permissions', 'permissions.module', 'permissions.module.parent'],
-      });
-
-      if (!role) {
-        throw new ErrorHandler('Rol no encontrado', HttpStatus.NOT_FOUND);
-      }
-
-      interface ModuleTree {
-        id: string;
-        name: string;
-        description?: string;
-        path?: string;
-        icon?: string;
-        permissions: string[];
-        children: ModuleTree[];
-        parentId: string | null;
-      }
-
-      // First, organize modules by their IDs
-      const modulesMap: Record<string, ModuleTree> = {};
-
-      // First pass: Create all module objects with their base properties
-      for (const perm of role.permissions) {
-        const module = perm.module;
-        if (!module) continue;
-
-        if (!modulesMap[module.id]) {
-          modulesMap[module.id] = {
-            id: module.id,
-            name: module.name,
-            description: module.description,
-            path: module.path?.startsWith('/') ? module.path : `/${module.path}`,
-            icon: module.icon,
-            permissions: [],
-            children: [],
-            parentId: module.parent?.id || null,
-          };
-        }
-        modulesMap[module.id].permissions.push(perm.action);
-      }
-
-      // Build the tree structure recursively
-      const buildTree = (parentId: string | null): ModuleTree[] => {
-        return Object.values(modulesMap)
-          .filter(module => module.parentId === parentId)
-          .map(module => ({
-            ...module,
-            children: buildTree(module.id),
-          }));
-      };
-
-      // Get root modules and build their trees
-      const rootModules = buildTree(null);
-
-      // Clean up function to remove parentId and empty children arrays
-      const cleanModule = (module: ModuleTree) => {
-        const { parentId, children, ...rest } = module;
-        const cleaned: any = { ...rest };
-
-        if (children && children.length > 0) {
-          cleaned.children = children.map(cleanModule).filter(child => {
-            return child.permissions.length > 0 || (child.children && child.children.length > 0);
-          });
-
-          if (cleaned.children.length === 0) {
-            delete cleaned.children;
-          }
-        }
-        return cleaned;
-      };
-
-      const modules = rootModules.map(cleanModule);
-      return { role: { id: role.id, name: role.name }, modules };
-    } catch (error) {
-      ErrorHandler.handle(error, 'RoleService.getModulesAndPermissions', {
-        resource: 'Rol',
-        id: roleId,
-      });
-    }
-  }
-
   async create(dto: CreateRoleDto) {
-    try {
-      const { permissionIds, ...rest } = dto;
-      const role = this.roleRepository.create(rest);
-      if (permissionIds && permissionIds.length) {
-        role.permissions = await this.permissionRepository.findByIds(permissionIds);
-      }
-      return this.roleRepository.save(role);
-    } catch (error) {
-      if (error.code === '23505') {
-        throw new ErrorHandler('El nombre del rol ya existe', HttpStatus.CONFLICT);
-      }
-      throw new ErrorHandler(error.message, HttpStatus.INTERNAL_SERVER_ERROR);
-    }
+    return await this.createUseCase.execute(dto);
   }
 
-  async findAll(): Promise<RoleEntity[]> {
-    return this.roleRepository.find();
+  async update(id: string, dto: UpdateRoleDto) {
+    return await this.updateUseCase.execute(id, dto);
   }
 
-  async findOne(id: string): Promise<RoleEntity> {
-    const role = await this.roleRepository.findOne({ where: { id } });
-    if (!role) {
-      throw new ErrorHandler('Rol no encontrado', HttpStatus.NOT_FOUND);
-    }
-    return role;
+  async remove(id: string) {
+    return await this.deleteUseCase.execute(id);
   }
 
-  async update(id: string, dto: Partial<CreateRoleDto>): Promise<RoleEntity> {
-    try {
-      const role = await this.roleRepository.preload({
-        id,
-        ...dto,
-      });
-      if (!role) {
-        throw new ErrorHandler('Rol no encontrado', HttpStatus.NOT_FOUND);
-      }
-      return await this.roleRepository.save(role);
-    } catch (error) {
-      if (error.code === '23505') {
-        throw new ErrorHandler('El nombre del rol ya existe', HttpStatus.CONFLICT);
-      }
-      throw new ErrorHandler(error.message, HttpStatus.INTERNAL_SERVER_ERROR);
-    }
+  async getAll(filters?: FilterRoleDto) {
+    return await this.getAllUseCase.execute(filters);
   }
 
-  async remove(id: string): Promise<void> {
-    const role = await this.findOne(id);
-    await this.roleRepository.remove(role);
+  async getById(id: string) {
+    return await this.getByIdUseCase.execute(id);
+  }
+
+  async getModulesAndPermissionsByRoleId(id: string) {
+    return await this.getModulesAndPermissionsByRoleIdUseCase.execute(id);
   }
 }

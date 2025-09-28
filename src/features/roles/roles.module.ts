@@ -8,6 +8,7 @@ import { RolesController } from './roles.controller';
 import { RoleService } from './services/role.service';
 import {
   CreateRoleUseCase,
+  GetModulesAndPermissionsByRoleIdUseCase,
   GetRoleByIdUseCase,
   GetRolesUseCase,
   RemoveRoleUseCase,
@@ -16,6 +17,7 @@ import {
 
 const repositories = [RoleWriteRepository, RoleReadRepository];
 const useCases = [
+  GetModulesAndPermissionsByRoleIdUseCase,
   CreateRoleUseCase,
   UpdateRoleUseCase,
   RemoveRoleUseCase,
@@ -26,6 +28,16 @@ const useCases = [
   imports: [TypeOrmModule.forFeature([RoleEntity, PermissionEntity])],
   controllers: [RolesController],
   providers: [RoleService, ...repositories, ...useCases],
-  exports: [RoleService, TypeOrmModule],
+  exports: [
+    RoleService,
+    TypeOrmModule,
+    RoleReadRepository,
+    GetModulesAndPermissionsByRoleIdUseCase,
+    CreateRoleUseCase,
+    UpdateRoleUseCase,
+    RemoveRoleUseCase,
+    GetRolesUseCase,
+    GetRoleByIdUseCase,
+  ],
 })
 export class RolesModule {}

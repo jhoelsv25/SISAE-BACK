@@ -5,6 +5,7 @@ import { PassportModule } from '@nestjs/passport';
 import { jwtConfig } from '../config/jwt.config';
 import { RolesModule } from '../features/roles/roles.module';
 import { RoleService } from '../features/roles/services/role.service';
+import { GetModulesAndPermissionsByRoleIdUseCase } from '../features/roles/use-cases';
 import { UsersModule } from '../features/users/users.module';
 import { UsersService } from '../features/users/users.service';
 import { AuthCookieService } from './auth-cookie.service';
@@ -27,6 +28,13 @@ import { JwtStrategy } from './strategies/jwt.strategy';
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy, AuthCookieService, UsersService, RoleService],
+  providers: [
+    AuthService,
+    JwtStrategy,
+    AuthCookieService,
+    UsersService,
+    RoleService,
+    GetModulesAndPermissionsByRoleIdUseCase,
+  ],
 })
 export class AuthModule {}

@@ -14,12 +14,12 @@ export class RolesController {
 
   @Get()
   findAll() {
-    return this.roleService.findAll();
+    return this.roleService.getAll();
   }
 
   @Get(':id')
   findOne(@Param('id') id: string) {
-    return this.roleService.getModulesAndPermissionsByRoleId(id);
+    return this.roleService.getById(id);
   }
 
   @Patch(':id')

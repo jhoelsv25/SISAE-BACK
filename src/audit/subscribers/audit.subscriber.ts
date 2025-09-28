@@ -26,6 +26,12 @@ export class AuditSubscriber implements EntitySubscriberInterface {
         return;
       }
 
+      // Validar que la entidad y su id existan
+      if (!event.entity || typeof event.entity.id === 'undefined') {
+        this.logger.error('Entidad o ID indefinido en AuditSubscriber.afterInsert');
+        return;
+      }
+
       const repo = connection.getRepository(AuditLog);
       await repo.save({
         userId: event.queryRunner?.data?.userId || null,
