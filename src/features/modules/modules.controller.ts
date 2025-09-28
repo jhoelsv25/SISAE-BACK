@@ -1,7 +1,8 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common';
 import { CreateModuleDto } from './dto/create-module.dto';
+import { FilterModuleDto } from './dto/filter-module.dto';
 import { UpdateModuleDto } from './dto/update-module.dto';
-import { ModulesService } from './modules.service';
+import { ModulesService } from './services/modules.service';
 
 @Controller('modules')
 export class ModulesController {
@@ -9,23 +10,22 @@ export class ModulesController {
 
   @Post()
   async create(@Body() dto: CreateModuleDto) {
-    console.log('Creating module with data:', dto);
     return await this.modulesService.create(dto);
   }
 
   @Get()
-  async findAll(@Query('page') page: number = 1, @Query('size') size: number = 10) {
-    return await this.modulesService.findAll(+page, +size);
+  async findAll(@Query() filters: FilterModuleDto) {
+    return await this.modulesService.getAll(filters);
   }
 
   @Get(':id')
   async findOne(@Param('id') id: string) {
-    return await this.modulesService.findOne(id);
+    return await this.modulesService.getById(id);
   }
 
   @Patch(':id')
-  async update(@Param('id') id: string, @Body() updateModuleDto: UpdateModuleDto) {
-    return await this.modulesService.update(id, updateModuleDto);
+  async update(@Param('id') id: string, @Body() dto: UpdateModuleDto) {
+    return await this.modulesService.update(id, dto);
   }
 
   @Delete(':id')

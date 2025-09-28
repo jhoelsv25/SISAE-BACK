@@ -1,12 +1,30 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { Module as ModuleEntity } from './entities/module.entity';
+import { ModuleEntity } from './entities/module.entity';
 import { ModulesController } from './modules.controller';
-import { ModulesService } from './modules.service';
+import { ModuleReadRepository } from './repositories/module-read.repository';
+import { ModuleWriteRepository } from './repositories/module.write.repository';
+import { ModulesService } from './services/modules.service';
+import {
+  CreateModuleUseCase,
+  GetModuleByIdUseCase,
+  GetModulesUseCase,
+  RemoveModuleUseCase,
+  UpdateModuleUseCase,
+} from './use-cases';
+
+const repositories = [ModuleReadRepository, ModuleWriteRepository];
+const useCases = [
+  CreateModuleUseCase,
+  UpdateModuleUseCase,
+  RemoveModuleUseCase,
+  GetModulesUseCase,
+  GetModuleByIdUseCase,
+];
 
 @Module({
   controllers: [ModulesController],
-  providers: [ModulesService],
+  providers: [ModulesService, ...repositories, ...useCases],
   imports: [TypeOrmModule.forFeature([ModuleEntity])],
 })
 export class ModulesModule {}

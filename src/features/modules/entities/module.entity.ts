@@ -1,9 +1,9 @@
-import { BaseEntity } from 'common/entities/base.entity';
 import { Column, Entity, ManyToOne, OneToMany } from 'typeorm';
-import { Permission } from '../../permissions/entities/permission.entity';
+import { BaseEntity } from '../../../common/entities/base.entity';
+import { PermissionEntity } from '../../permissions/entities/permission.entity';
 
 @Entity('modules')
-export class Module extends BaseEntity {
+export class ModuleEntity extends BaseEntity {
   @Column({
     type: 'varchar',
     length: 100,
@@ -32,24 +32,32 @@ export class Module extends BaseEntity {
 
   @Column({
     type: 'varchar',
+    length: 20,
+    nullable: false,
+    default: 'private',
+  })
+  visibility: 'private' | 'public';
+
+  @Column({
+    type: 'varchar',
     length: 255,
     nullable: true,
   })
   icon: string;
 
-  @ManyToOne(() => Module, module => module.children, {
+  @ManyToOne(() => ModuleEntity, module => module.children, {
     nullable: true,
     onDelete: 'SET NULL',
   })
-  parent: Module | null;
+  parent: ModuleEntity | null;
 
-  @OneToMany(() => Module, module => module.parent, {
+  @OneToMany(() => ModuleEntity, module => module.parent, {
     cascade: true,
   })
-  children: Module[];
+  children: ModuleEntity[];
 
-  @OneToMany(() => Permission, permission => permission.module, {
+  @OneToMany(() => PermissionEntity, permission => permission.module, {
     cascade: true,
   })
-  permissions: Permission[];
+  permissions: PermissionEntity[];
 }

@@ -1,6 +1,16 @@
 import { ApiProperty, PartialType } from '@nestjs/swagger';
-import { Transform } from 'class-transformer';
-import { IsOptional, IsString, IsUUID, Matches, MaxLength, MinLength } from 'class-validator';
+import { Transform, Type } from 'class-transformer';
+import {
+  IsArray,
+  IsIn,
+  IsNumber,
+  IsOptional,
+  IsString,
+  Matches,
+  MaxLength,
+  MinLength,
+  ValidateNested,
+} from 'class-validator';
 import { CreateModuleDto } from './create-module.dto';
 
 export class UpdateModuleDto extends PartialType(CreateModuleDto) {
@@ -36,14 +46,8 @@ export class UpdateModuleDto extends PartialType(CreateModuleDto) {
     required: false,
   })
   @IsOptional()
-  @IsString({ message: 'El código del módulo debe ser una cadena de texto' })
-  @MinLength(2, { message: 'El código del módulo debe tener al menos 2 caracteres' })
-  @MaxLength(100, { message: 'El código del módulo no puede tener más de 100 caracteres' })
-  @Matches(/^[A-Z_]+$/, {
-    message: 'El código debe contener solo letras mayúsculas y guiones bajos',
-  })
-  @Transform(({ value }) => value?.toUpperCase()?.trim())
-  code?: string;
+  @IsNumber({}, { message: 'La posición debe ser un número' })
+  position?: number;
 
   @ApiProperty({
     description: 'Ruta de navegación del módulo en la aplicación',
@@ -73,11 +77,19 @@ export class UpdateModuleDto extends PartialType(CreateModuleDto) {
   icon?: string;
 
   @ApiProperty({
-    description: 'ID del módulo padre si es un submódulo',
-    example: 'f47ac10b-58cc-4372-a567-0e02b2c3d479',
+    description: 'Visibilidad del módulo: público o privado',
+    example: 'public',
     required: false,
   })
   @IsOptional()
-  @IsUUID(4, { message: 'El ID del módulo padre debe ser un UUID válido' })
-  parentId?: string;
+  @IsString({ message: 'La visibilidad debe ser una cadena de texto' })
+  @IsIn(['private', 'public'], { message: 'La visibilidad debe ser private o public' })
+  visibility: 'private' | 'public';
+
+  @ApiProperty({ required: false, type: [CreateModuleDto] })
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => CreateModuleDto)
+  children?: CreateModuleDto[];
 }
