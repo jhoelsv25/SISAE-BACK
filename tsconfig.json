@@ -3,11 +3,14 @@
     "module": "commonjs",
     "declaration": true,
     "paths": {
-      "auth/*": ["src/auth/*"],
-      "config/*": ["src/config/*"],
-      "common/*": ["src/common/*"],
-      "entities/base": ["src/common/entities/base.entity"],
-      "features/*": ["src/features/*"],
+      "@auth/*": ["src/auth/*"],
+      "@audit/*": ["src/audit/*"],
+      "@config/*": ["src/config/*"],
+      "@common/*": ["src/common/*"],
+      "@features/*": ["src/features/*"],
+      "@shared/*": ["src/shared/*"],
+      "@database/*": ["src/database/*"],
+      "@health/*": ["src/health/*"]
     },
     "removeComments": true,
     "emitDecoratorMetadata": true,
@@ -19,10 +22,10 @@
     "baseUrl": "./",
     "incremental": true,
     "skipLibCheck": true,
-    "strictNullChecks": true,
-    "forceConsistentCasingInFileNames": true,
-    "noImplicitAny": false,
-    "strictBindCallApply": false,
-    "noFallthroughCasesInSwitch": false
+    //"strict": true,
+
+    "forceConsistentCasingInFileNames": false,
+    "noFallthroughCasesInSwitch": false,
+    "strictPropertyInitialization": false
   }
 }
