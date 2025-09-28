@@ -1,10 +1,10 @@
-import { BaseEntity } from 'common/entities/base.entity';
-import { Permission } from 'features/permissions/entities/permission.entity';
-import { User } from 'features/users/entities/user.entity';
 import { Column, Entity, JoinTable, ManyToMany, OneToMany } from 'typeorm';
+import { BaseEntity } from '../../../common/entities/base.entity';
+import { PermissionEntity } from '../../permissions/entities/permission.entity';
+import { UserEntity } from '../../users/entities/user.entity';
 
 @Entity('roles')
-export class Role extends BaseEntity {
+export class RoleEntity extends BaseEntity {
   @Column({
     type: 'varchar',
     length: 100,
@@ -20,12 +20,12 @@ export class Role extends BaseEntity {
   })
   description?: string;
 
-  @OneToMany(() => User, user => user.role, {
+  @OneToMany(() => UserEntity, user => user.role, {
     onDelete: 'CASCADE',
   })
-  users: User[];
+  users: UserEntity[];
 
-  @ManyToMany(() => Permission, {
+  @ManyToMany(() => PermissionEntity, {
     nullable: false,
     cascade: true,
     onDelete: 'CASCADE',
@@ -41,5 +41,5 @@ export class Role extends BaseEntity {
       referencedColumnName: 'id',
     },
   })
-  permissions: Permission[];
+  permissions: PermissionEntity[];
 }

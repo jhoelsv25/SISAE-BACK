@@ -2,17 +2,17 @@ import { HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ErrorHandler } from '../../../common/exceptions';
-import { Permission } from '../../permissions/entities/permission.entity';
+import { PermissionEntity } from '../../permissions/entities/permission.entity';
 import { CreateRoleDto } from '../dto/create-role.dto';
-import { Role } from '../entities/role.entity';
+import { RoleEntity } from '../entities/role.entity';
 
 @Injectable()
 export class RoleService {
   constructor(
-    @InjectRepository(Role)
-    private readonly roleRepository: Repository<Role>,
-    @InjectRepository(Permission)
-    private readonly permissionRepository: Repository<Permission>,
+    @InjectRepository(RoleEntity)
+    private readonly roleRepository: Repository<RoleEntity>,
+    @InjectRepository(PermissionEntity)
+    private readonly permissionRepository: Repository<PermissionEntity>,
   ) {}
 
   async getModulesAndPermissionsByRoleId(roleId: string): Promise<{
@@ -127,11 +127,11 @@ export class RoleService {
     }
   }
 
-  async findAll(): Promise<Role[]> {
+  async findAll(): Promise<RoleEntity[]> {
     return this.roleRepository.find();
   }
 
-  async findOne(id: string): Promise<Role> {
+  async findOne(id: string): Promise<RoleEntity> {
     const role = await this.roleRepository.findOne({ where: { id } });
     if (!role) {
       throw new ErrorHandler('Rol no encontrado', HttpStatus.NOT_FOUND);
@@ -139,7 +139,7 @@ export class RoleService {
     return role;
   }
 
-  async update(id: string, dto: Partial<CreateRoleDto>): Promise<Role> {
+  async update(id: string, dto: Partial<CreateRoleDto>): Promise<RoleEntity> {
     try {
       const role = await this.roleRepository.preload({
         id,
