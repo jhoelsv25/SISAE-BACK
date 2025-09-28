@@ -1,6 +1,6 @@
 // audit/entities/audit-log.entity.ts
-import { BaseEntity } from 'common/entities/base.entity';
 import { Column, Entity } from 'typeorm';
+import { BaseEntity } from '../../common/entities/base.entity';
 
 @Entity('audit_logs')
 export class AuditLog extends BaseEntity {
