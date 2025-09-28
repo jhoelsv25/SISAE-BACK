@@ -1,10 +1,10 @@
-import { BaseEntity } from 'common/entities/base.entity';
 import { Column, Entity, ManyToMany, ManyToOne } from 'typeorm';
-import { Module } from '../../modules/entities/module.entity';
-import { Role } from '../../roles/entities/role.entity';
+import { BaseEntity } from '../../../common/entities/base.entity';
+import { ModuleEntity } from '../../modules/entities/module.entity';
+import { RoleEntity } from '../../roles/entities/role.entity';
 
 @Entity('permissions')
-export class Permission extends BaseEntity {
+export class PermissionEntity extends BaseEntity {
   @Column({
     type: 'varchar',
     length: 100,
@@ -18,13 +18,16 @@ export class Permission extends BaseEntity {
   })
   action: string;
 
-  @ManyToOne('Module', {
+  @Column({ type: 'text', nullable: true })
+  description?: string;
+
+  @ManyToOne(() => ModuleEntity, {
     eager: true,
     nullable: false,
     onDelete: 'RESTRICT',
   })
-  module: Module;
+  module: ModuleEntity;
 
-  @ManyToMany(() => Role, role => role.permissions)
-  roles: Role[];
+  @ManyToMany(() => RoleEntity, role => role.permissions)
+  roles: RoleEntity[];
 }

@@ -27,6 +27,17 @@ export class CreatePermissionDto {
   action: 'create' | 'read' | 'update' | 'delete';
 
   @ApiProperty({
+    description: 'Descripción del permiso',
+    example: 'Permiso para crear usuarios en el sistema',
+    required: false,
+    maxLength: 255,
+  })
+  @IsString({ message: 'La descripción debe ser una cadena de texto' })
+  @MaxLength(255, { message: 'La descripción no puede tener más de 255 caracteres' })
+  @Transform(({ value }) => value?.trim())
+  description?: string;
+
+  @ApiProperty({
     description: 'ID del módulo al que pertenece el permiso',
     example: 'f47ac10b-58cc-4372-a567-0e02b2c3d479',
   })

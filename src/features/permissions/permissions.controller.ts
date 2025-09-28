@@ -1,7 +1,8 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common';
 import { CreatePermissionDto } from './dto/create-permission.dto';
+import { FilterPermissionDto } from './dto/filter-permission.dto';
 import { UpdatePermissionDto } from './dto/update-permission.dto';
-import { PermissionsService } from './permissions.service';
+import { PermissionsService } from './services/permissions.service';
 
 @Controller('permissions')
 export class PermissionsController {
@@ -9,17 +10,18 @@ export class PermissionsController {
 
   @Post()
   async create(@Body() dto: CreatePermissionDto) {
+    console.log(dto);
     return this.permissionsService.create(dto);
   }
 
   @Get()
-  async findAll() {
-    return this.permissionsService.findAll();
+  async findAll(@Query() filters: FilterPermissionDto) {
+    return this.permissionsService.getAll(filters);
   }
 
   @Get(':id')
   async findOne(@Param('id') id: string) {
-    return this.permissionsService.findOne(id);
+    return this.permissionsService.getById(id);
   }
 
   @Patch(':id')
