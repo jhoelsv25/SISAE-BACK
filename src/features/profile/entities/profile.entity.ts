@@ -1,6 +1,6 @@
-import { BaseEntity } from 'entities/base';
-import { User } from 'features/users/entities/user.entity';
-import { Column, Entity, OneToOne, JoinColumn } from 'typeorm';
+import { Column, Entity, JoinColumn, OneToOne } from 'typeorm';
+import { BaseEntity } from '../../../common/entities/base.entity';
+import { UserEntity } from '../../users/entities/user.entity';
 
 export enum Gender {
   MALE = 'male',
@@ -28,7 +28,7 @@ export enum MaritalStatus {
 }
 
 @Entity('profiles')
-export class Profile extends BaseEntity {
+export class ProfileEntity extends BaseEntity {
   @Column({
     type: 'varchar',
     length: 100,
@@ -282,9 +282,9 @@ export class Profile extends BaseEntity {
   @Column({ type: 'uuid' })
   userId: string;
 
-  @OneToOne(() => User, user => user.profile)
+  @OneToOne(() => UserEntity, user => user.profile)
   @JoinColumn({ name: 'userId' })
-  user: User;
+  user: UserEntity;
 
   // Métodos helper
   get fullName(): string {
