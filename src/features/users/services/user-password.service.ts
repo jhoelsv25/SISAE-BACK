@@ -4,13 +4,13 @@ import { Repository } from 'typeorm';
 import { ErrorHandler } from '../../../common/exceptions';
 import { comparePassword, hashPassword } from '../../../common/utils/password.util';
 import { ChangePasswordDto } from '../dto/change-password.dto';
-import { User } from '../entities/user.entity';
+import { UserEntity } from '../entities/user.entity';
 
 @Injectable()
 export class UserPasswordService {
   constructor(
-    @InjectRepository(User)
-    private readonly userRepository: Repository<User>,
+    @InjectRepository(UserEntity)
+    private readonly userRepository: Repository<UserEntity>,
   ) {}
 
   async changePassword(id: string, dto: ChangePasswordDto): Promise<void> {
@@ -22,7 +22,7 @@ export class UserPasswordService {
       user.password = await hashPassword(dto.newPassword);
       await this.userRepository.save(user);
     } catch (error) {
-      throw new ErrorHandler(error.message, error.status);
+      throw new ErrorHandler('Ocurrió un error inesperado, por favor intenta más tarde', 500);
     }
   }
 

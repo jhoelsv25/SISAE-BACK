@@ -1,16 +1,16 @@
 import { EntityManager, Repository } from 'typeorm';
-import { User } from '../entities/user.entity';
+import { UserEntity } from '../entities/user.entity';
 
-export class UserRepository extends Repository<User> {
+export class UserRepository extends Repository<UserEntity> {
   constructor(manager: EntityManager) {
-    super(User, manager);
+    super(UserEntity, manager);
   }
 
-  async findActiveUsers(): Promise<User[]> {
+  async findActiveUsers(): Promise<UserEntity[]> {
     return this.find({ where: { isActive: true } });
   }
 
-  async findByRole(roleName: string): Promise<User[]> {
+  async findByRole(roleName: string): Promise<UserEntity[]> {
     return this.createQueryBuilder('user')
       .leftJoinAndSelect('user.role', 'role')
       .where('role.name = :roleName', { roleName })

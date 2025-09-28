@@ -3,11 +3,11 @@ import { ChangePasswordDto } from './dto/change-password.dto';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { UserQueryDto } from './dto/user-query.dto';
-import { User } from './entities/user.entity';
+import { UserEntity } from './entities/user.entity';
 import { UserCrudService } from './services/user-crud.service';
 import { UserPasswordService } from './services/user-password.service';
 
-export type UserResponse = { message: string; data: Partial<User> };
+export type UserResponse = { message: string; data: Partial<UserEntity> };
 
 @Injectable()
 export class UsersService {
@@ -27,15 +27,15 @@ export class UsersService {
     return this.crud.findAll(query);
   }
 
-  async findOne(id: string): Promise<User> {
+  async findOne(id: string): Promise<UserEntity | null> {
     return this.crud.findOne(id);
   }
 
-  async findByUsername(username: string): Promise<User | null> {
+  async findByUsername(username: string): Promise<UserEntity | null> {
     return this.crud.findByUsername(username);
   }
 
-  async findByEmail(email: string): Promise<User | null> {
+  async findByEmail(email: string): Promise<UserEntity | null> {
     return this.crud.findByEmail(email);
   }
 

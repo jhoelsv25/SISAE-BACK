@@ -5,14 +5,14 @@ import { ErrorHandler } from '../../../common/exceptions';
 import { hashPassword } from '../../../common/utils/password.util';
 import { CreateUserDto } from '../dto/create-user.dto';
 import { UpdateUserDto } from '../dto/update-user.dto';
-import { User } from '../entities/user.entity';
+import { UserEntity } from '../entities/user.entity';
 import { UserRepository } from '../repositories/user.repository';
 
 @Injectable()
 export class UserCrudService {
   constructor(
-    @InjectRepository(User)
-    private readonly userRepository: Repository<User>,
+    @InjectRepository(UserEntity)
+    private readonly userRepository: Repository<UserEntity>,
     private readonly entityManager: EntityManager,
   ) {
     this.customRepo = new UserRepository(this.entityManager);
@@ -20,15 +20,17 @@ export class UserCrudService {
 
   private readonly customRepo: UserRepository;
   // Ejemplo de uso del repositorio personalizado
-  async findActiveUsers(): Promise<User[]> {
+  async findActiveUsers(): Promise<UserEntity[]> {
     return this.customRepo.findActiveUsers();
   }
 
-  async findByRole(roleName: string): Promise<User[]> {
+  async findByRole(roleName: string): Promise<UserEntity[]> {
     return this.customRepo.findByRole(roleName);
   }
 
-  async create(createUserDto: CreateUserDto): Promise<{ message: string; data: Partial<User> }> {
+  async create(
+    createUserDto: CreateUserDto,
+  ): Promise<{ message: string; data: Partial<UserEntity> }> {
     try {
       const existingUser = await this.userRepository.findOne({
         where: { username: createUserDto.username },
@@ -53,14 +55,14 @@ export class UserCrudService {
       const { password, ...res } = await this.userRepository.save(user);
       return { message: 'El usuario ha sido creado exitosamente', data: res };
     } catch (error) {
-      throw new ErrorHandler(error.message, error.status);
+      throw new ErrorHandler('Ocurrio un errror inesperado, prueba ma');
     }
   }
 
   async update(
     id: string,
     updateUserDto: UpdateUserDto,
-  ): Promise<{ message: string; data: Partial<User> }> {
+  ): Promise<{ message: string; data: Partial<UserEntity> }> {
     try {
       const user = await this.findOne(id);
       if (updateUserDto.username && updateUserDto.username !== user.username) {
@@ -80,11 +82,11 @@ export class UserCrudService {
       const { password: pwd, ...rest } = await this.userRepository.save(user);
       return { message: 'El usuario ha sido actualizado exitosamente', data: rest };
     } catch (error) {
-      throw new ErrorHandler(error.message, error.status);
+      throw new ErrorHandler('Ocurrio un errror inesperado, prueba ma');
     }
   }
 
-  async findOne(id: string): Promise<User> {
+  async findOne(id: string): Promise<UserEntity> {
     try {
       const user = await this.userRepository.findOne({
         where: { id },
@@ -93,7 +95,7 @@ export class UserCrudService {
       if (!user) throw new ErrorHandler('Usuario no encontrado', 404);
       return user;
     } catch (error) {
-      throw new ErrorHandler(error.message, error.status);
+      throw new ErrorHandler('Ocurrio un errror inesperado, prueba ma');
     }
   }
 
@@ -124,11 +126,11 @@ export class UserCrudService {
         total,
       };
     } catch (error) {
-      throw new ErrorHandler(error.message, error.status);
+      throw new ErrorHandler('Ocurrio un errror inesperado, prueba ma');
     }
   }
 
-  async remove(id: string): Promise<{ message: string; data: Partial<User> }> {
+  async remove(id: string): Promise<{ message: string; data: Partial<UserEntity> }> {
     try {
       const user = await this.findOne(id);
       if (user?.role?.name === 'SuperAdmin')
@@ -136,10 +138,10 @@ export class UserCrudService {
       await this.userRepository.remove(user);
       return { message: 'El usuario ha sido eliminado exitosamente', data: { id } };
     } catch (error) {
-      throw new ErrorHandler(error.message, error.status);
+      throw new ErrorHandler('Ocurrio un errror inesperado, prueba más tarde');
     }
   }
-  async findByUsername(username: string): Promise<User | null> {
+  async findByUsername(username: string): Promise<UserEntity | null> {
     try {
       return await this.userRepository.findOne({
         where: { username },
@@ -157,35 +159,35 @@ export class UserCrudService {
         ],
       });
     } catch (error) {
-      throw new ErrorHandler(error.message, error.status);
+      throw new ErrorHandler('Ocurrio un errror inesperado, prueba ma');
     }
   }
 
-  async findByEmail(email: string): Promise<User | null> {
+  async findByEmail(email: string): Promise<UserEntity | null> {
     try {
       return await this.userRepository.findOne({ where: { email }, relations: ['role'] });
     } catch (error) {
-      throw new ErrorHandler(error.message, error.status);
+      throw new ErrorHandler('Ocurrio un errror inesperado, prueba ma');
     }
   }
 
-  async updateLastLogin(id: string): Promise<{ message: string; data: Partial<User> }> {
+  async updateLastLogin(id: string): Promise<{ message: string; data: Partial<UserEntity> }> {
     try {
       await this.userRepository.update(id, { lastLogin: new Date() });
       return { message: 'Último acceso actualizado', data: { id } };
     } catch (error) {
-      throw new ErrorHandler(error.message, error.status);
+      throw new ErrorHandler('Ocurrio un errror inesperado, prueba ma');
     }
   }
 
-  async toggleActiveStatus(id: string): Promise<{ message: string; data: Partial<User> }> {
+  async toggleActiveStatus(id: string): Promise<{ message: string; data: Partial<UserEntity> }> {
     try {
       const user = await this.findOne(id);
       user.isActive = !user.isActive;
       const { password, ...rest } = await this.userRepository.save(user);
       return { message: 'Estado actualizado', data: rest };
     } catch (error) {
-      throw new ErrorHandler(error.message, error.status);
+      throw new ErrorHandler('Ocurrio un errror inesperado, prueba ma');
     }
   }
 }

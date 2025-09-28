@@ -1,10 +1,10 @@
-import { BaseEntity } from 'common/entities/base.entity';
-import { Profile } from 'features/profile/entities/profile.entity';
-import { Role } from 'features/roles/entities/role.entity';
 import { Column, Entity, ManyToOne, OneToOne } from 'typeorm';
+import { BaseEntity } from '../../../common/entities/base.entity';
+import { ProfileEntity } from '../../profile/entities/profile.entity';
+import { RoleEntity } from '../../roles/entities/role.entity';
 
 @Entity('users')
-export class User extends BaseEntity {
+export class UserEntity extends BaseEntity {
   @Column({
     type: 'varchar',
     length: 50,
@@ -62,16 +62,16 @@ export class User extends BaseEntity {
   })
   profilePicture?: string;
 
-  @OneToOne(() => Profile, profile => profile.user, {
+  @OneToOne(() => ProfileEntity, profile => profile.user, {
     nullable: true,
     cascade: true,
   })
-  profile?: Profile;
+  profile?: ProfileEntity;
 
-  @ManyToOne(() => Role, role => role.users, {
+  @ManyToOne(() => RoleEntity, role => role.users, {
     eager: true,
     nullable: true,
     onDelete: 'RESTRICT',
   })
-  role?: Role;
+  role?: RoleEntity;
 }
