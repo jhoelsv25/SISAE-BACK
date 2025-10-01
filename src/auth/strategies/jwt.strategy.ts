@@ -2,11 +2,15 @@ import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
+import { AuthService } from '../auth.service';
 import { PayloadAuth } from '../interfaces/payload.interface';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
-  constructor(private readonly configService: ConfigService) {
+  constructor(
+    private readonly configService: ConfigService,
+    private readonly authService: AuthService,
+  ) {
     // Intenta obtener el secret desde la configuración estructurada primero
     let jwtSecret = configService.get<string>('jwt.secret');
 
@@ -27,6 +31,8 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   }
 
   async validate(payload: PayloadAuth) {
-    return payload;
+    console.log('Payload recibido en JwtStrategy:', payload);
+    // Siempre retorna el usuario real con rol y permisos actualizados
+    return await this.authService.validate(payload);
   }
 }

@@ -1,8 +1,9 @@
-import { CanActivate, ExecutionContext, ForbiddenException } from '@nestjs/common';
+import { CanActivate, ExecutionContext, ForbiddenException, Injectable } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { Observable } from 'rxjs';
 import { ROLES_KEY } from '../decorators/role.decorator';
 
+@Injectable()
 export class RolesGuard implements CanActivate {
   constructor(private readonly reflector: Reflector) {}
 
@@ -17,9 +18,17 @@ export class RolesGuard implements CanActivate {
     }
 
     const { user } = context.switchToHttp().getRequest();
-    if (!user || !user.roles) {
-      throw new ForbiddenException('No tienes roles asignados');
+    if (!user || !user.role) {
+      throw new ForbiddenException('No tienes rol asignado');
     }
-    return requiredRoles.some(role => user.roles?.includes(role));
+    // user.role puede ser string o { name: string }, ajusta según tu modelo
+    const userRoles = Array.isArray(user.role)
+      ? user.role
+      : typeof user.role === 'string'
+        ? [user.role]
+        : user.role?.name
+          ? [user.role.name]
+          : [];
+    return requiredRoles.some(role => userRoles.includes(role));
   }
 }

@@ -14,9 +14,9 @@ export class AuthController {
   @Post('login')
   async login(@Body() loginDto: LoginDto, @Res() res: Response) {
     const result = await this.authService.login(loginDto);
-    const { accessToken, refreshToken, user } = result.data;
+    const { accessToken, refreshToken, user, modules } = result.data;
     await this.authCookieService.setAuthCookies(res, accessToken, refreshToken);
-    res.json({ message: result.message, user, accessToken });
+    res.json({ message: result.message, user, accessToken, modules });
   }
 
   @Post('refresh-token')

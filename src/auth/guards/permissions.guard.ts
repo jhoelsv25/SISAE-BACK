@@ -18,7 +18,7 @@ export class PermissionsGuard implements CanActivate {
 
     const { user } = context.switchToHttp().getRequest();
     const userPermissions = user?.permissions || [];
-
+    console.log({ requiredPermissions, userPermissions });
     if (!requiredPermissions.every(permission => userPermissions.includes(permission))) {
       throw new ForbiddenException('No tienes permiso para esta acción');
     }

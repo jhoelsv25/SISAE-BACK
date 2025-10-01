@@ -36,6 +36,12 @@ export class AuthService {
     if (!isValid) {
       throw new UnauthorizedException('Contraseña y/o usuario incorrecto');
     }
+    // Obtener módulos y permisos del rol
+    let modules = [];
+    if (user.role?.id) {
+      const roleData = await this.roleService.getModulesAndPermissionsByRoleId(user.role.id);
+      modules = roleData.modules || [];
+    }
     // Generar tokens JWT incluyendo el rol
     const { accessToken, refreshToken } = this.generateTokens(user);
 
@@ -51,6 +57,7 @@ export class AuthService {
         },
         accessToken,
         refreshToken,
+        modules,
       },
     };
   }
@@ -94,21 +101,39 @@ export class AuthService {
   }
 
   async validate(payload: PayloadAuth): Promise<any> {
-    // Buscar el usuario por id y retornar con rol y permisos
+    // Buscar el usuario por id
     const user = await this.userService.findOne(payload.sub);
     if (!user) {
       throw new UnauthorizedException('Usuario no encontrado');
     }
-    // Mapear los permisos a formato 'modulo:accion' para el guard
-    const permissions = (user.role?.permissions || []).map(
-      (perm: any) => `${perm.module?.name}:${perm.action}`,
-    );
+    if (!user.role) {
+      throw new UnauthorizedException('El usuario no tiene rol asignado');
+    }
+    // Obtener módulos y permisos del rol
+    const roleData = await this.roleService.getModulesAndPermissionsByRoleId(user.role.id);
+
+    // Función recursiva para extraer permisos
+    function extractPermissions(modules: any[]): string[] {
+      let perms: string[] = [];
+      for (const mod of modules) {
+        if (mod.permissions && mod.permissions.length) {
+          perms.push(...mod.permissions);
+        }
+        if (mod.children && mod.children.length) {
+          perms.push(...extractPermissions(mod.children));
+        }
+      }
+      return perms;
+    }
+
+    const permissions = extractPermissions(roleData.modules || []);
     return {
       id: user.id,
       username: user.username,
       email: user.email,
-      role: user.role?.name || null,
+      role: user.role.name,
       permissions,
+      modules: roleData.modules || [],
     };
   }
 
