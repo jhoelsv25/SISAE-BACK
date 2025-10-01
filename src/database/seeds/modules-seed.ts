@@ -1,4 +1,5 @@
 import { DataSource } from 'typeorm';
+import { ActionEntity } from '../../features/actions/entities/action.entity';
 import { ModuleEntity } from '../../features/modules/entities/module.entity';
 import { PermissionEntity } from '../../features/permissions/entities/permission.entity';
 import { RoleEntity } from '../../features/roles/entities/role.entity';
@@ -21,6 +22,7 @@ export async function seedMenuModules(dataSource: DataSource) {
 
   // Define menu structure
   const menuItems: MenuItem[] = [
+    // --- Dashboard ---
     {
       id: 'dashboard',
       icon: 'fa-chart-line',
@@ -28,75 +30,186 @@ export async function seedMenuModules(dataSource: DataSource) {
       route: '/dashboard/home',
       position: 1,
     },
+
+    // --- Gestión de Usuarios y Roles ---
     {
-      id: 'management',
-      icon: 'fa-folder',
-      label: 'Gestión',
-      route: '/management',
+      id: 'administration-users',
+      icon: 'fa-users-cog',
+      label: 'Usuarios y Roles',
+      route: '/administration/users',
       position: 2,
       children: [
         {
-          id: 'roles',
-          icon: 'fa-user-shield',
-          label: 'Roles y Permisos',
-          route: '/management/roles',
-        },
-        {
-          id: 'modules',
-          icon: 'fa-puzzle-piece',
-          label: 'Módulos',
-          route: '/management/modules',
-        },
-        {
-          id: 'permissions',
-          icon: 'fa-key',
-          label: 'Permisos',
-          route: '/management/permissions',
-        },
-        {
-          id: 'users',
-          icon: 'fa-users-cog',
-          label: 'Usuarios',
-          route: '/management/users',
-        },
-      ],
-    },
-
-    {
-      id: 'administration',
-      icon: 'fa-cog',
-      label: 'Administración',
-      route: '/dashboard/administration',
-      position: 12,
-      permissions: ['admin.view'],
-      children: [
-        {
           id: 'admin-users',
-          icon: 'fa-users-cog',
+          icon: 'fa-user',
           label: 'Usuarios',
-          route: '/dashboard/administration/users',
+          route: '/administration/users',
+          position: 1,
+          children: [
+            {
+              id: 'user-list',
+              icon: 'fa-table',
+              label: 'Listado de Usuarios',
+              route: '/administration/users/list',
+              position: 1,
+            },
+            {
+              id: 'user-import',
+              icon: 'fa-file-import',
+              label: 'Importar Usuarios',
+              route: '/administration/users/import',
+              position: 2,
+            },
+          ],
         },
         {
           id: 'admin-roles',
           icon: 'fa-user-shield',
-          label: 'Roles y Permisos',
-          route: '/dashboard/administration/roles',
+          label: 'Roles',
+          route: '/administration/roles',
+          position: 2,
         },
         {
-          id: 'admin-settings',
-          icon: 'fa-sliders-h',
-          label: 'Configuraciones',
-          route: '/dashboard/administration/settings',
+          id: 'admin-permissions',
+          icon: 'fa-key',
+          label: 'Permisos y Acciones',
+          route: '/administration/permissions',
+          position: 3,
+          children: [
+            {
+              id: 'permission-list',
+              icon: 'fa-list',
+              label: 'Listado de Permisos',
+              route: '/administration/permissions/list',
+              position: 1,
+            },
+            {
+              id: 'action-list',
+              icon: 'fa-tasks',
+              label: 'Listado de Acciones',
+              route: '/administration/permissions/actions',
+              position: 2,
+            },
+          ],
+        },
+      ],
+    },
+
+    // --- Configuración del Sistema ---
+    {
+      id: 'administration-settings',
+      icon: 'fa-cog',
+      label: 'Configuraciones',
+      route: '/administration/settings',
+      position: 3,
+      children: [
+        {
+          id: 'settings-institution',
+          icon: 'fa-school',
+          label: 'Datos Institucionales',
+          route: '/administration/settings/institution',
+        },
+        {
+          id: 'settings-general',
+          icon: 'fa-cogs',
+          label: 'General',
+          route: '/administration/settings/general',
+        },
+        {
+          id: 'settings-mail',
+          icon: 'fa-envelope',
+          label: 'Correo',
+          route: '/administration/settings/mail',
+        },
+        {
+          id: 'settings-notifications',
+          icon: 'fa-bell',
+          label: 'Notificaciones',
+          route: '/administration/settings/notifications',
+        },
+        {
+          id: 'settings-api',
+          icon: 'fa-plug',
+          label: 'API / Integraciones',
+          route: '/administration/settings/api',
+        },
+      ],
+    },
+
+    // --- Mantenimiento y Seguridad ---
+    {
+      id: 'administration-maintenance',
+      icon: 'fa-tools',
+      label: 'Mantenimiento',
+      route: '/administration/maintenance',
+      position: 4,
+      children: [
+        {
+          id: 'admin-modules',
+          icon: 'fa-puzzle-piece',
+          label: 'Módulos',
+          route: '/administration/modules',
         },
         {
           id: 'admin-backup',
           icon: 'fa-database',
           label: 'Respaldos',
-          route: '/dashboard/administration/backup',
+          route: '/administration/backup',
+        },
+        {
+          id: 'settings-backup',
+          icon: 'fa-database',
+          label: 'Backups Configuración',
+          route: '/administration/settings/backup',
+        },
+        {
+          id: 'admin-audit',
+          icon: 'fa-clipboard-list',
+          label: 'Auditoría',
+          route: '/administration/audit',
+        },
+      ],
+    },
+
+    // --- Integraciones y Notificaciones ---
+    {
+      id: 'administration-integrations',
+      icon: 'fa-plug',
+      label: 'Integraciones',
+      route: '/administration/integrations',
+      position: 5,
+      children: [
+        {
+          id: 'admin-integrations',
+          icon: 'fa-network-wired',
+          label: 'Conexiones',
+          route: '/administration/integrations',
+        },
+        {
+          id: 'admin-notifications',
+          icon: 'fa-bell',
+          label: 'Notificaciones',
+          route: '/administration/notifications',
         },
       ],
     },
   ];
+
+  // Antes de crear módulos, asegúrate de poblar la tabla actions con los keys estándar
+  const actionRepository = dataSource.getRepository(ActionEntity);
+  const standardActions = [
+    { key: 'create', name: 'Crear' },
+    { key: 'read', name: 'Leer' },
+    { key: 'update', name: 'Actualizar' },
+    { key: 'delete', name: 'Eliminar' },
+  ];
+  for (const action of standardActions) {
+    let exists = await actionRepository.findOne({ where: { key: action.key } });
+    if (!exists) {
+      exists = actionRepository.create(action);
+      await actionRepository.save(exists);
+    }
+  }
 
   // Recursive function to create modules and their children
   async function createModuleTree(
@@ -117,15 +230,28 @@ export async function seedMenuModules(dataSource: DataSource) {
         icon: menuItem.icon,
         position: menuItem.position || 0,
         parent: parent,
+        key: menuItem.id, // Asigna el key único del módulo
       });
       await moduleRepository.save(module);
 
       // Create standard CRUD permissions for the module
       const actions = ['create', 'read', 'update', 'delete'];
-      for (const action of actions) {
+      for (const actionKey of actions) {
+        // Busca la entidad de acción por key
+        let actionEntity = await dataSource
+          .getRepository(ActionEntity)
+          .findOne({ where: { key: actionKey } });
+        if (!actionEntity) {
+          actionEntity = dataSource
+            .getRepository(ActionEntity)
+            .create({ key: actionKey, name: actionKey });
+          await dataSource.getRepository(ActionEntity).save(actionEntity);
+        }
+        const permissionKey = `${menuItem.id}:${actionKey}`;
         const permission = permissionRepository.create({
-          name: `${menuItem.id}_${action}`,
-          action: action,
+          key: permissionKey,
+          name: `${menuItem.label} - ${actionKey}`,
+          action: actionEntity,
           module: module,
         });
         await permissionRepository.save(permission);

@@ -53,19 +53,26 @@ export async function seedAdminPermissions(dataSource: DataSource) {
 
   for (const module of modules) {
     const actions = ['create', 'read', 'update', 'delete'];
-    for (const action of actions) {
+    for (const actionKey of actions) {
+      // Busca la entidad de acción por key
+      const actionEntity = await dataSource
+        .getRepository('actions')
+        .findOne({ where: { key: actionKey } });
+      if (!actionEntity) continue; // Si no existe la acción, sáltala
+      const permissionKey = `${module.key}:${actionKey}`;
       let existingPermission = await permissionRepository.findOne({
         where: {
-          name: `${module.name}_${action}`,
-          action: action,
+          key: permissionKey,
+          action: { id: actionEntity.id },
           module: { id: module.id },
         },
-        relations: ['module'],
+        relations: ['module', 'action'],
       });
       if (!existingPermission) {
         const permission = permissionRepository.create({
-          name: `${module.name}_${action}`,
-          action: action,
+          key: permissionKey,
+          name: `${module.name} - ${actionKey}`,
+          action: actionEntity,
           module: module,
         });
         await permissionRepository.save(permission);
