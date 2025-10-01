@@ -88,4 +88,16 @@ export class CreateModuleDto {
   @ValidateNested({ each: true })
   @Type(() => CreateModuleDto)
   children?: CreateModuleDto[];
+
+  @ApiProperty({
+    description: 'Clave única del módulo (ej: users, dashboard)',
+    example: 'users',
+    minLength: 2,
+    maxLength: 100,
+  })
+  @IsString({ message: 'El key del módulo debe ser una cadena de texto' })
+  @MinLength(2, { message: 'El key del módulo debe tener al menos 2 caracteres' })
+  @MaxLength(100, { message: 'El key del módulo no puede tener más de 100 caracteres' })
+  @Transform(({ value }) => value?.trim())
+  key: string;
 }

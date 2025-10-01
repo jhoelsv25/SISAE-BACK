@@ -86,6 +86,20 @@ export class UpdateModuleDto extends PartialType(CreateModuleDto) {
   @IsIn(['private', 'public'], { message: 'La visibilidad debe ser private o public' })
   visibility: 'private' | 'public';
 
+  @ApiProperty({
+    description: 'Clave única del módulo (ej: users, dashboard)',
+    example: 'users',
+    minLength: 2,
+    maxLength: 100,
+    required: false,
+  })
+  @IsOptional()
+  @IsString({ message: 'El key del módulo debe ser una cadena de texto' })
+  @MinLength(2, { message: 'El key del módulo debe tener al menos 2 caracteres' })
+  @MaxLength(100, { message: 'El key del módulo no puede tener más de 100 caracteres' })
+  @Transform(({ value }) => value?.trim())
+  key?: string;
+
   @ApiProperty({ required: false, type: [CreateModuleDto] })
   @IsOptional()
   @IsArray()

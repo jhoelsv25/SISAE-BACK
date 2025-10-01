@@ -11,6 +11,9 @@ export class ModuleEntity extends BaseEntity {
   })
   name: string;
 
+  @Column({ unique: true })
+  key: string;
+
   @Column({
     type: 'text',
     nullable: true,

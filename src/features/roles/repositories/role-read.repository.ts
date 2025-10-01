@@ -90,7 +90,8 @@ export class RoleReadRepository {
           parentId: module.parent?.id || null,
         };
       }
-      modulesMap[module.id].permissions.push(perm.action);
+      // Agrega el key del permiso, no el objeto action
+      modulesMap[module.id].permissions.push(perm.key);
     }
 
     // Construir árbol recursivo

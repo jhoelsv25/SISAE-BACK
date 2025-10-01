@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
-import { IsString, IsUUID, MaxLength, MinLength } from 'class-validator';
+import { IsNotEmpty, IsString, IsUUID, MaxLength, MinLength } from 'class-validator';
 
 export class CreatePermissionDto {
   @ApiProperty({
@@ -17,14 +17,13 @@ export class CreatePermissionDto {
 
   @ApiProperty({
     description: 'Acción que representa el permiso',
-    example: 'create',
-    enum: ['create', 'read', 'update', 'delete'],
+    example: 'f47ac10b-58cc-4372-a567-0e02b2c3d479',
+    required: true,
   })
   @IsString({ message: 'La acción del permiso debe ser una cadena de texto' })
-  @MinLength(2, { message: 'La acción del permiso debe tener al menos 2 caracteres' })
-  @MaxLength(10, { message: 'La acción del permiso no puede tener más de 10 caracteres' })
-  @Transform(({ value }) => value?.trim().toLowerCase())
-  action: 'create' | 'read' | 'update' | 'delete';
+  @IsNotEmpty({ message: 'La acción del permiso no puede estar vacía' })
+  @IsUUID('4', { message: 'La acción debe ser un UUID válido' })
+  actionId: string;
 
   @ApiProperty({
     description: 'Descripción del permiso',
@@ -40,7 +39,10 @@ export class CreatePermissionDto {
   @ApiProperty({
     description: 'ID del módulo al que pertenece el permiso',
     example: 'f47ac10b-58cc-4372-a567-0e02b2c3d479',
+    required: true,
   })
+  @IsString({ message: 'El ID del módulo debe ser una cadena de texto' })
+  @IsNotEmpty({ message: 'El ID del módulo no puede estar vacío' })
   @IsUUID(4, { message: 'El ID del módulo debe ser un UUID válido' })
   moduleId: string;
 }

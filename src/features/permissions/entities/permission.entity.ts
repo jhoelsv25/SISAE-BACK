@@ -1,5 +1,6 @@
 import { Column, Entity, ManyToMany, ManyToOne } from 'typeorm';
 import { BaseEntity } from '../../../common/entities/base.entity';
+import { ActionEntity } from '../../actions/entities/action.entity';
 import { ModuleEntity } from '../../modules/entities/module.entity';
 import { RoleEntity } from '../../roles/entities/role.entity';
 
@@ -8,18 +9,23 @@ export class PermissionEntity extends BaseEntity {
   @Column({
     type: 'varchar',
     length: 100,
+    unique: true,
     nullable: false,
   })
-  name: string;
+  key: string;
+
   @Column({
     type: 'varchar',
     length: 100,
     nullable: false,
   })
-  action: string;
+  name: string;
 
   @Column({ type: 'text', nullable: true })
   description?: string;
+
+  @ManyToOne(() => ActionEntity, { eager: true, nullable: false, onDelete: 'RESTRICT' })
+  action: ActionEntity;
 
   @ManyToOne(() => ModuleEntity, {
     eager: true,

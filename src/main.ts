@@ -56,8 +56,11 @@ async function bootstrap() {
       transform: true, // Transforma los payloads a los tipos definidos en los DTOs
       disableErrorMessages: false, // Mostrar mensajes de error detallados
       exceptionFactory: errors => {
+        const allMessages = errors
+          .map(error => Object.values(error.constraints).join(', '))
+          .join(' | ');
         return new BadRequestException({
-          message: 'Datos de entrada inválidos',
+          message: allMessages,
           details: errors.map(error => ({
             property: error.property,
             value: error.value,
