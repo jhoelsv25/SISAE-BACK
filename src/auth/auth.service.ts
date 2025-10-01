@@ -61,6 +61,34 @@ export class AuthService {
       },
     };
   }
+  async checkToken(accessToken: string) {
+    try {
+      const payload = this.jwtService.verify(accessToken);
+      const user = await this.userService.findOne(payload.sub);
+      if (!user) {
+        throw new UnauthorizedException('Usuario no encontrado');
+      }
+      let modules = [];
+      if (user.role?.id) {
+        const roleData = await this.roleService.getModulesAndPermissionsByRoleId(user.role.id);
+        modules = roleData.modules || [];
+      }
+      return {
+        message: 'Token válido',
+
+        user: {
+          ...user,
+          role: {
+            id: user.role?.id || null,
+            name: user.role?.name || null,
+          },
+        },
+        modules,
+      };
+    } catch (error) {
+      throw new UnauthorizedException('Access token inválido o expirado');
+    }
+  }
 
   async refresh(refreshToken: string) {
     try {

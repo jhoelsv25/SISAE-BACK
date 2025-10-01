@@ -42,6 +42,20 @@ export class AuthController {
     res.json(await this.authService.logout());
   }
 
+  @Get('check-token')
+  async checkToken(@Req() req: Request, @Res() res: Response) {
+    const accessToken = req.cookies?.accessToken;
+    if (!accessToken) {
+      return res.status(401).json({
+        message: 'No se proporcionó el access token',
+        cookies: req.cookies,
+        headers: req.headers,
+      });
+    }
+    const result = await this.authService.checkToken(accessToken);
+    res.json(result);
+  }
+
   @Get('modules/:id')
   async getModulesByRole(@Param('id') roleId: string) {
     return await this.authService.getModulesByRole(roleId);
