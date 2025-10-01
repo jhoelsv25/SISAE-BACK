@@ -45,46 +45,10 @@ export async function seedAdminPermissions(dataSource: DataSource) {
     await roleRepository.save(adminRole);
   }
 
-  // Obtener todos los módulos
-  const modules = await moduleRepository.find();
+  // Obtener todos los permisos existentes
+  const allPermissions = await permissionRepository.find();
 
-  // Crear permisos para cada módulo
-  const permissions: PermissionEntity[] = [];
-
-  for (const module of modules) {
-    const actions = ['create', 'read', 'update', 'delete'];
-    for (const actionKey of actions) {
-      // Busca la entidad de acción por key
-      const actionEntity = await dataSource
-        .getRepository('actions')
-        .findOne({ where: { key: actionKey } });
-      if (!actionEntity) continue; // Si no existe la acción, sáltala
-      const permissionKey = `${module.key}:${actionKey}`;
-      let existingPermission = await permissionRepository.findOne({
-        where: {
-          key: permissionKey,
-          action: { id: actionEntity.id },
-          module: { id: module.id },
-        },
-        relations: ['module', 'action'],
-      });
-      if (!existingPermission) {
-        const permission = permissionRepository.create({
-          key: permissionKey,
-          name: `${module.name} - ${actionKey}`,
-          action: actionEntity,
-          module: module,
-        });
-        await permissionRepository.save(permission);
-        permissions.push(permission);
-      } else {
-        permissions.push(existingPermission);
-      }
-    }
-  }
-
-  // Asignar permisos al rol admin (evitar duplicados por id)
-  const allPermissions = [...(adminRole.permissions || []), ...permissions];
+  // Asignar todos los permisos al rol admin (evitar duplicados por id)
   const uniquePermissions = allPermissions.filter(
     (perm, index, self) => self.findIndex(p => p.id === perm.id) === index,
   );

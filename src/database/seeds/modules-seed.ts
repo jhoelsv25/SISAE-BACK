@@ -35,59 +35,29 @@ export async function seedMenuModules(dataSource: DataSource) {
     {
       id: 'administration-users',
       icon: 'fa-users-cog',
-      label: 'Usuarios y Roles',
-      route: '/administration/users',
+      label: 'Gestión de Acceso',
+      route: '/access',
       position: 2,
       children: [
         {
           id: 'admin-users',
           icon: 'fa-user',
           label: 'Usuarios',
-          route: '/administration/users',
+          route: '/access/users',
           position: 1,
           children: [
             {
               id: 'user-list',
               icon: 'fa-table',
-              label: 'Listado de Usuarios',
-              route: '/administration/users/list',
+              label: 'Usuarios',
+              route: '/access/users/list',
               position: 1,
             },
             {
               id: 'user-import',
               icon: 'fa-file-import',
-              label: 'Importar Usuarios',
-              route: '/administration/users/import',
-              position: 2,
-            },
-          ],
-        },
-        {
-          id: 'admin-roles',
-          icon: 'fa-user-shield',
-          label: 'Roles',
-          route: '/administration/roles',
-          position: 2,
-        },
-        {
-          id: 'admin-permissions',
-          icon: 'fa-key',
-          label: 'Permisos y Acciones',
-          route: '/administration/permissions',
-          position: 3,
-          children: [
-            {
-              id: 'permission-list',
-              icon: 'fa-list',
-              label: 'Listado de Permisos',
-              route: '/administration/permissions/list',
-              position: 1,
-            },
-            {
-              id: 'action-list',
-              icon: 'fa-tasks',
-              label: 'Listado de Acciones',
-              route: '/administration/permissions/actions',
+              label: 'Importar',
+              route: '/access/users/import',
               position: 2,
             },
           ],
@@ -100,38 +70,32 @@ export async function seedMenuModules(dataSource: DataSource) {
       id: 'administration-settings',
       icon: 'fa-cog',
       label: 'Configuraciones',
-      route: '/administration/settings',
+      route: '/settings',
       position: 3,
       children: [
         {
           id: 'settings-institution',
           icon: 'fa-school',
           label: 'Datos Institucionales',
-          route: '/administration/settings/institution',
+          route: '/settings/institution',
         },
         {
           id: 'settings-general',
           icon: 'fa-cogs',
           label: 'General',
-          route: '/administration/settings/general',
+          route: '/settings/general',
         },
         {
           id: 'settings-mail',
           icon: 'fa-envelope',
           label: 'Correo',
-          route: '/administration/settings/mail',
+          route: '/settings/mail',
         },
         {
           id: 'settings-notifications',
           icon: 'fa-bell',
           label: 'Notificaciones',
-          route: '/administration/settings/notifications',
-        },
-        {
-          id: 'settings-api',
-          icon: 'fa-plug',
-          label: 'API / Integraciones',
-          route: '/administration/settings/api',
+          route: '/settings/notifications',
         },
       ],
     },
@@ -141,55 +105,65 @@ export async function seedMenuModules(dataSource: DataSource) {
       id: 'administration-maintenance',
       icon: 'fa-tools',
       label: 'Mantenimiento',
-      route: '/administration/maintenance',
+      route: '/maintenance',
       position: 4,
       children: [
-        {
-          id: 'admin-modules',
-          icon: 'fa-puzzle-piece',
-          label: 'Módulos',
-          route: '/administration/modules',
-        },
         {
           id: 'admin-backup',
           icon: 'fa-database',
           label: 'Respaldos',
-          route: '/administration/backup',
+          route: '/maintenance/backup',
         },
         {
           id: 'settings-backup',
           icon: 'fa-database',
           label: 'Backups Configuración',
-          route: '/administration/settings/backup',
+          route: '/maintenance/settings-backup',
         },
         {
           id: 'admin-audit',
           icon: 'fa-clipboard-list',
           label: 'Auditoría',
-          route: '/administration/audit',
+          route: '/maintenance/audit',
         },
       ],
     },
 
-    // --- Integraciones y Notificaciones ---
+    // --- Gestión de Seguridad ---
     {
-      id: 'administration-integrations',
-      icon: 'fa-plug',
-      label: 'Integraciones',
-      route: '/administration/integrations',
-      position: 5,
+      id: 'admin-permissions',
+      icon: 'fa-key',
+      label: 'Gestión de Seguridad',
+      route: '/administration',
+      position: 3,
       children: [
         {
-          id: 'admin-integrations',
-          icon: 'fa-network-wired',
-          label: 'Conexiones',
-          route: '/administration/integrations',
+          id: 'admin-roles',
+          icon: 'fa-user-shield',
+          label: 'Roles',
+          route: '/administration/roles',
+          position: 1,
         },
         {
-          id: 'admin-notifications',
-          icon: 'fa-bell',
-          label: 'Notificaciones',
-          route: '/administration/notifications',
+          id: 'admin-modules',
+          icon: 'fa-puzzle-piece',
+          label: 'Módulos',
+          route: '/administration/modules',
+          position: 2,
+        },
+        {
+          id: 'permission-list',
+          icon: 'fa-lock',
+          label: 'Permisos',
+          route: '/administration/permissions',
+          position: 3,
+        },
+        {
+          id: 'action-list',
+          icon: 'fa-tools', //edit,create,update,delete
+          label: 'Acciones',
+          route: '/administration/actions',
+          position: 4,
         },
       ],
     },
@@ -235,7 +209,14 @@ export async function seedMenuModules(dataSource: DataSource) {
       await moduleRepository.save(module);
 
       // Create standard CRUD permissions for the module
-      const actions = ['create', 'read', 'update', 'delete'];
+      const actions = ['read', 'write', 'update', 'delete'];
+      // El key del permiso será solo el nombre base del módulo, sin prefijos tipo admin- o administration-
+      let moduleKey = menuItem.id
+        .replace(/^admin-/, '')
+        .replace(/^administration-/, '')
+        .replace(/-/g, '_')
+        .replace(/^modules_/, 'modules');
+      if (moduleKey === '') moduleKey = 'modules';
       for (const actionKey of actions) {
         // Busca la entidad de acción por key
         let actionEntity = await dataSource
@@ -247,14 +228,18 @@ export async function seedMenuModules(dataSource: DataSource) {
             .create({ key: actionKey, name: actionKey });
           await dataSource.getRepository(ActionEntity).save(actionEntity);
         }
-        const permissionKey = `${menuItem.id}:${actionKey}`;
-        const permission = permissionRepository.create({
-          key: permissionKey,
-          name: `${menuItem.label} - ${actionKey}`,
-          action: actionEntity,
-          module: module,
-        });
-        await permissionRepository.save(permission);
+        const permissionKey = `${moduleKey}:${actionKey}`;
+        // Verifica si el permiso ya existe antes de crearlo
+        let exists = await permissionRepository.findOne({ where: { key: permissionKey } });
+        if (!exists) {
+          const permission = permissionRepository.create({
+            key: permissionKey,
+            name: `${menuItem.label} - ${actionKey}`,
+            action: actionEntity,
+            module: module,
+          });
+          await permissionRepository.save(permission);
+        }
       }
     }
 
