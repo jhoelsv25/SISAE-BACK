@@ -63,14 +63,28 @@ export class ErrorHandler extends HttpException {
       status = HttpStatus.BAD_REQUEST;
       message = 'Datos de entrada inválidos';
     }
-    // Si el error tiene un mensaje, usarlo
-    else if (error?.message) {
+    // Errores de JS comunes (TypeError, ReferenceError, etc.)
+    else if (
+      error instanceof TypeError ||
+      error instanceof ReferenceError ||
+      error instanceof SyntaxError
+    ) {
+      status = HttpStatus.INTERNAL_SERVER_ERROR;
+      message = 'Error interno del servidor';
+    }
+    // Si el error tiene un mensaje, usarlo (solo si no es error interno)
+    else if (error?.message && status < 500) {
       message = error.message;
     }
 
     // Log del error
     if (status >= HttpStatus.INTERNAL_SERVER_ERROR) {
-      this.logger.error(`Error${contextStr}: ${message}`, error.stack);
+      this.logger.error(`Error${contextStr}: ${message}`);
+      // Solo loguea el stack trace en consola, no lo envía al cliente
+      if (error?.stack) {
+        // Puedes comentar la siguiente línea si no quieres ver el stack en consola
+        console.error(error.stack);
+      }
     } else if (status >= HttpStatus.BAD_REQUEST) {
       this.logger.warn(`Warning${contextStr}: ${message}`);
     } else {
