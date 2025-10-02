@@ -11,11 +11,7 @@ import {
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { AutoPermission } from '../../auth/decorators/auto-permission.decorator';
-import {
-  AdminRoles,
-  CommonRoles,
-  OnlySuperAdmin,
-} from '../../auth/decorators/common-roles.decorator';
+import { AdminRoles, OnlySuperAdmin } from '../../auth/decorators/common-roles.decorator';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../../auth/guards/permissions.guard';
 import { RolesGuard } from '../../auth/guards/roles.guard';
@@ -28,13 +24,11 @@ import { ModulesService } from './services/modules.service';
 @ApiBearerAuth()
 @Controller('modules')
 @UseGuards(JwtAuthGuard, RolesGuard, PermissionsGuard)
-@CommonRoles()
 export class ModulesController {
   constructor(private readonly modulesService: ModulesService) {}
 
   @Post()
   @AdminRoles()
-  @AutoPermission('create')
   async create(@Body() dto: CreateModuleDto) {
     return await this.modulesService.create(dto);
   }
@@ -53,14 +47,12 @@ export class ModulesController {
 
   @Patch(':id')
   @AdminRoles()
-  @AutoPermission('update')
   async update(@Param('id') id: string, @Body() dto: UpdateModuleDto) {
     return await this.modulesService.update(id, dto);
   }
 
   @Delete(':id')
   @OnlySuperAdmin()
-  @AutoPermission('delete')
   async remove(@Param('id') id: string) {
     return await this.modulesService.remove(id);
   }
