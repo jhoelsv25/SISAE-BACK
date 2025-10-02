@@ -1,4 +1,5 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common';
+import { FilterBaseDto } from '../../common/dtos/filter-base.dto';
 import { ActionsService } from './actions.service';
 import { CreateActionDto } from './dto/create-action.dto';
 import { UpdateActionDto } from './dto/update-action.dto';
@@ -13,8 +14,8 @@ export class ActionsController {
   }
 
   @Get()
-  async findAll() {
-    return await this.actionsService.findAll();
+  async findAll(@Query() filter: FilterBaseDto) {
+    return await this.actionsService.findAll(filter);
   }
 
   @Get(':id')
