@@ -13,14 +13,16 @@ export class PermissionsGuard implements CanActivate {
     ]);
 
     if (!requiredPermissions) {
-      return true; // no requiere permiso, se permite
+      return true;
     }
 
     const { user } = context.switchToHttp().getRequest();
     const userPermissions = user?.permissions || [];
-    console.log({ requiredPermissions, userPermissions });
     if (!requiredPermissions.every(permission => userPermissions.includes(permission))) {
-      throw new ForbiddenException('No tienes permiso para esta acción');
+      throw new ForbiddenException(
+        'No tienes permisos suficientes para acceder a este recurso. se requiere: ' +
+          requiredPermissions.join(', '),
+      );
     }
     return true;
   }

@@ -31,8 +31,6 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   }
 
   async validate(payload: PayloadAuth) {
-    console.log('Payload recibido en JwtStrategy:', payload);
-    // Siempre retorna el usuario real con rol y permisos actualizados
     return await this.authService.validate(payload);
   }
 }
