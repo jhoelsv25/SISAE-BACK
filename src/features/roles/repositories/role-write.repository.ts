@@ -12,19 +12,25 @@ export class RoleWriteRepository {
 
   async create(dto: CreateRoleDto) {
     return this.dataSource.transaction(async manager => {
-      const role = manager.create(RoleEntity, { name: dto.name, description: dto.description });
+      try {
+        const role = manager.create(RoleEntity, { name: dto.name, description: dto.description });
 
-      if (dto.permissionIds?.length) {
-        role.permissions = await manager.find(PermissionEntity, {
-          where: { id: In(dto.permissionIds) },
-        });
+        if (dto.permissionIds?.length) {
+          role.permissions = await manager.find(PermissionEntity, {
+            where: { id: In(dto.permissionIds) },
+            select: ['id', 'name'],
+          });
+        }
+
+        await manager.save(role);
+        return {
+          data: role,
+          message: 'Rol creado correctamente',
+        };
+      } catch (error) {
+        console.error(error);
+        throw new ErrorHandler('Ocurrio un error al crear el rol');
       }
-
-      await manager.save(role);
-      return {
-        data: role,
-        message: 'Rol creado correctamente',
-      };
     });
   }
 

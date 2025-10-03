@@ -19,8 +19,9 @@ export class PermissionReadRepository {
 
       const query = this.repo
         .createQueryBuilder('permission')
-        .leftJoinAndSelect('permission.module', 'module') // Cambiado a AndSelect
-        .where('permission.deletedAt IS NULL');
+        .leftJoinAndSelect('permission.module', 'module')
+        .leftJoin('permission.action', 'action')
+        .addSelect(['action.id', 'action.name']);
       if (filters?.search) {
         query.andWhere('permission.name ILIKE :search OR permission.action ILIKE :search', {
           search: `%${filters.search}%`,
@@ -74,6 +75,8 @@ export class PermissionReadRepository {
         .createQueryBuilder('permission')
         .leftJoin('permission.module', 'module')
         .addSelect(['module.id', 'module.name'])
+        .leftJoin('permission.action', 'action')
+        .addSelect(['action.id', 'action.name'])
         .where('permission.id = :id', { id })
         .getOne();
 

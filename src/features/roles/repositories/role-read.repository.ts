@@ -18,8 +18,14 @@ export class RoleReadRepository {
     const query = this.repo
       .createQueryBuilder('role')
       .leftJoinAndSelect('role.permissions', 'permission')
-      .select(['role.id', 'role.name', 'permission.id', 'permission.name'])
-      .where('role.deletedAt IS NULL');
+      .select([
+        'role.id',
+        'role.name',
+        'role.description',
+        'role.createdAt',
+        'permission.id',
+        'permission.name',
+      ]);
 
     if (filters?.search) {
       query.andWhere('role.name ILIKE :search', { search: `%${filters.search}%` });
