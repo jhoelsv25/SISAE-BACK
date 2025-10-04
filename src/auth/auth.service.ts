@@ -1,5 +1,6 @@
-import { Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import { ErrorHandler } from '../common/exceptions';
 import { comparePassword } from '../common/utils/password.util';
 import { RoleService } from '../features/roles/services/role.service';
 import { UsersService } from '../features/users/users.service';
@@ -15,58 +16,67 @@ export class AuthService {
   ) {}
 
   async getModulesByRole(roleId: string): Promise<any> {
-    return this.roleService.getModulesAndPermissionsByRoleId(roleId);
+    try {
+      return this.roleService.getModulesAndPermissionsByRoleId(roleId);
+    } catch (error) {
+      ErrorHandler.handleUnknownError(error, 'Error al obtener módulos del rol');
+    }
   }
 
   async login(loginDto: LoginDto) {
-    const { username, password } = loginDto;
-    // Buscar usuario por username
-    const user = await this.userService.findByUsername(username);
-    if (!user) {
-      throw new NotFoundException('Usuario no encontrado');
-    }
-    // Validar si el usuario está activo
-    if (!user.isActive) {
-      throw new UnauthorizedException(
-        'Tu cuenta está inactiva. Por favor contacta al administrador para activarla.',
-      );
-    }
-    // Validar contraseña
-    const isValid = await comparePassword(password, user.password);
-    if (!isValid) {
-      throw new UnauthorizedException('Contraseña y/o usuario incorrecto');
-    }
-    // Obtener módulos y permisos del rol
-    let modules = [];
-    if (user.role?.id) {
-      const roleData = await this.roleService.getModulesAndPermissionsByRoleId(user.role.id);
-      modules = roleData.modules || [];
-    }
-    // Generar tokens JWT incluyendo el rol
-    const { accessToken, refreshToken } = this.generateTokens(user);
+    try {
+      const { username, password } = loginDto;
+      // Buscar usuario por username
+      const user = await this.userService.findByUsername(username);
+      if (!user) {
+        ErrorHandler.validation('Usuario no encontrado', 'Login');
+      }
+      // Validar si el usuario está activo
+      if (!user.isActive) {
+        ErrorHandler.forbidden(
+          'Tu cuenta está inactiva. Por favor contacta al administrador para activarla.',
+          'Login',
+        );
+      }
+      // Validar contraseña
+      const isValid = await comparePassword(password, user.password);
+      if (!isValid) {
+        ErrorHandler.unauthorized('Contraseña y/o usuario incorrecto', 'Login');
+      }
+      // Obtener módulos y permisos del rol
+      let modules = [];
+      if (user.role?.id) {
+        const roleData = await this.roleService.getModulesAndPermissionsByRoleId(user.role.id);
+        modules = roleData.modules || [];
+      }
+      // Generar tokens JWT incluyendo el rol
+      const { accessToken, refreshToken } = this.generateTokens(user);
 
-    return {
-      message: 'Inicio de sesión exitoso, bienvenido ' + user.username,
-      data: {
-        user: {
-          ...user,
-          role: {
-            id: user.role?.id || null,
-            name: user.role?.name || null,
+      return {
+        message: 'Inicio de sesión exitoso, bienvenido ' + user.username,
+        data: {
+          user: {
+            ...user,
+            role: {
+              id: user.role?.id || null,
+              name: user.role?.name || null,
+            },
           },
+          accessToken,
+          refreshToken,
+          modules,
         },
-        accessToken,
-        refreshToken,
-        modules,
-      },
-    };
+      };
+    } catch (error) {
+      ErrorHandler.handleUnknownError(error, 'Error durante el inicio de sesión');
+    }
   }
   async checkToken(accessToken: string) {
     try {
       const payload = this.jwtService.verify(accessToken);
       const user = await this.userService.findOne(payload.sub);
       if (!user) {
-        throw new UnauthorizedException('Usuario no encontrado');
+        ErrorHandler.unauthorized('Usuario no encontrado', 'CheckToken');
       }
       let modules = [];
       if (user.role?.id) {
@@ -86,7 +96,7 @@ export class AuthService {
         modules,
       };
     } catch (error) {
-      throw new UnauthorizedException('Access token inválido o expirado');
+      ErrorHandler.handleUnknownError(error, 'Access token inválido o expirado');
     }
   }
 
@@ -95,7 +105,7 @@ export class AuthService {
       const payload = this.jwtService.verify(refreshToken);
       const user = await this.userService.findOne(payload.sub);
       if (!user) {
-        throw new UnauthorizedException('Usuario no encontrado');
+        ErrorHandler.unauthorized('Usuario no encontrado', 'RefreshToken');
       }
 
       const newAccessToken = this.jwtService.sign({
@@ -109,7 +119,10 @@ export class AuthService {
         message: 'Token renovado',
         data: {
           user: {
-            ...user,
+            id: user.id,
+            username: user.username,
+            email: user.email,
+            isActive: user.isActive,
             role: {
               id: user.role?.id || null,
               name: user.role?.name || null,
@@ -119,50 +132,58 @@ export class AuthService {
         },
       };
     } catch (error) {
-      throw new UnauthorizedException('Refresh token inválido o expirado');
+      ErrorHandler.handleUnknownError(error, 'Refresh token inválido o expirado');
     }
   }
 
   async logout() {
-    // Aquí podrías invalidar el refreshToken en base de datos si lo manejas
-    return { message: 'Logout exitoso' };
+    try {
+      // Aquí podrías invalidar el refreshToken en base de datos si lo manejas
+      return { message: 'Logout exitoso' };
+    } catch (error) {
+      ErrorHandler.handleUnknownError(error, 'Error durante el logout');
+    }
   }
 
   async validate(payload: PayloadAuth): Promise<any> {
-    // Buscar el usuario por id
-    const user = await this.userService.findOne(payload.sub);
-    if (!user) {
-      throw new UnauthorizedException('Usuario no encontrado');
-    }
-    if (!user.role) {
-      throw new UnauthorizedException('El usuario no tiene rol asignado');
-    }
-    // Obtener módulos y permisos del rol
-    const roleData = await this.roleService.getModulesAndPermissionsByRoleId(user.role.id);
-
-    // Función recursiva para extraer permisos
-    function extractPermissions(modules: any[]): string[] {
-      let perms: string[] = [];
-      for (const mod of modules) {
-        if (mod.permissions && mod.permissions.length) {
-          perms.push(...mod.permissions);
-        }
-        if (mod.children && mod.children.length) {
-          perms.push(...extractPermissions(mod.children));
-        }
+    try {
+      // Buscar el usuario por id
+      const user = await this.userService.findOne(payload.sub);
+      if (!user) {
+        ErrorHandler.unauthorized('Usuario no encontrado', 'Validate');
       }
-      return perms;
-    }
+      if (!user.role) {
+        ErrorHandler.unauthorized('El usuario no tiene rol asignado', 'Validate');
+      }
+      // Obtener módulos y permisos del rol
+      const roleData = await this.roleService.getModulesAndPermissionsByRoleId(user.role.id);
 
-    const permissions = extractPermissions(roleData.modules || []);
-    return {
-      id: user.id,
-      username: user.username,
-      email: user.email,
-      role: user.role.name,
-      permissions,
-      modules: roleData.modules || [],
-    };
+      // Función recursiva para extraer permisos
+      function extractPermissions(modules: any[]): string[] {
+        let perms: string[] = [];
+        for (const mod of modules) {
+          if (mod.permissions && mod.permissions.length) {
+            perms.push(...mod.permissions);
+          }
+          if (mod.children && mod.children.length) {
+            perms.push(...extractPermissions(mod.children));
+          }
+        }
+        return perms;
+      }
+
+      const permissions = extractPermissions(roleData.modules || []);
+      return {
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        role: user.role.name,
+        permissions,
+        modules: roleData.modules || [],
+      };
+    } catch (error) {
+      ErrorHandler.handleUnknownError(error, 'Error al validar el usuario');
+    }
   }
 
   private generateTokens(user: any) {
