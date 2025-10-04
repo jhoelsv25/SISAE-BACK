@@ -1,14 +1,8 @@
-import { Global, Module } from '@nestjs/common';
-import { APP_FILTER } from '@nestjs/core';
-import { GlobalExceptionFilter } from './http-exception.filter';
+import { Module } from '@nestjs/common';
 
-@Global()
-@Module({
-  providers: [
-    {
-      provide: APP_FILTER,
-      useClass: GlobalExceptionFilter,
-    },
-  ],
-})
+/**
+ * ExceptionsModule - Módulo para el manejo de excepciones
+ * El GlobalExceptionFilter se configura en main.ts como filtro global
+ */
+@Module({})
 export class ExceptionsModule {}
