@@ -17,6 +17,9 @@ import { corsConfig } from './config/cors.config';
 import { swaggerConfig } from './config/swagger.config';
 
 async function bootstrap() {
+  // Configurar zona horaria UTC para toda la aplicación
+  process.env.TZ = 'UTC';
+
   const logger = new Logger('Bootstrap');
 
   const app = await NestFactory.create(AppModule);

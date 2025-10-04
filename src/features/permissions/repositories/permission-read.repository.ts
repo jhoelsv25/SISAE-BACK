@@ -20,10 +20,10 @@ export class PermissionReadRepository {
       const query = this.repo
         .createQueryBuilder('permission')
         .leftJoinAndSelect('permission.module', 'module')
-        .leftJoin('permission.action', 'action')
-        .addSelect(['action.id', 'action.name']);
+        .leftJoinAndSelect('permission.actions', 'action');
+
       if (filters?.search) {
-        query.andWhere('permission.name ILIKE :search OR permission.action ILIKE :search', {
+        query.andWhere('permission.name ILIKE :search OR permission.key ILIKE :search', {
           search: `%${filters.search}%`,
         });
       }
@@ -51,7 +51,7 @@ export class PermissionReadRepository {
       const mappedData = data.map(perm => ({
         id: perm.id,
         name: perm.name,
-        action: perm.action,
+        actions: perm.actions, // Array de acciones
         description: perm.description,
         module: perm.module ? { id: perm.module.id, name: perm.module.name } : null,
         createdAt: perm.createdAt,
@@ -73,10 +73,8 @@ export class PermissionReadRepository {
     try {
       const permission = await this.repo
         .createQueryBuilder('permission')
-        .leftJoin('permission.module', 'module')
-        .addSelect(['module.id', 'module.name'])
-        .leftJoin('permission.action', 'action')
-        .addSelect(['action.id', 'action.name'])
+        .leftJoinAndSelect('permission.module', 'module')
+        .leftJoinAndSelect('permission.actions', 'action')
         .where('permission.id = :id', { id })
         .getOne();
 
