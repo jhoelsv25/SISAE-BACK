@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
-import { IsNotEmpty, IsString, IsUUID, MaxLength, MinLength } from 'class-validator';
+import { IsArray, IsNotEmpty, IsString, IsUUID, MaxLength, MinLength } from 'class-validator';
 
 export class CreatePermissionDto {
   @ApiProperty({
@@ -20,10 +20,10 @@ export class CreatePermissionDto {
     example: 'f47ac10b-58cc-4372-a567-0e02b2c3d479',
     required: true,
   })
-  @IsString({ message: 'La acción del permiso debe ser una cadena de texto' })
+  @IsArray({ message: 'La acción del permiso debe ser un arreglo' })
   @IsNotEmpty({ message: 'La acción del permiso no puede estar vacía' })
-  @IsUUID('4', { message: 'La acción debe ser un UUID válido' })
-  actionId: string;
+  @IsUUID('4', { each: true, message: 'La acción debe ser un UUID válido' })
+  actionIds: string[];
 
   @ApiProperty({
     description: 'Descripción del permiso',

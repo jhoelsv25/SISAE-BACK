@@ -1,8 +1,10 @@
-import { Column, Entity, ManyToOne, OneToOne } from 'typeorm';
+import { Column, Entity, Index, ManyToOne, OneToOne } from 'typeorm';
 import { BaseEntity } from '../../../common/entities/base.entity';
 import { ProfileEntity } from '../../profile/entities/profile.entity';
 import { RoleEntity } from '../../roles/entities/role.entity';
 
+@Index('idx_user_username', ['username'])
+@Index('idx_user_email', ['email'])
 @Entity('users')
 export class UserEntity extends BaseEntity {
   @Column({

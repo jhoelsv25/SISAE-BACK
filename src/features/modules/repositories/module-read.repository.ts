@@ -17,10 +17,7 @@ export class ModuleReadRepository {
       const page = filters.page ?? 1;
       const size = filters.size ?? 20;
 
-      const query = this.repo
-        .createQueryBuilder('module')
-        .where('module.parent IS NULL')
-        .andWhere('module.deletedAt IS NULL');
+      const query = this.repo.createQueryBuilder('module').where('module.parent IS NULL');
 
       if (filters.search) {
         query.andWhere('LOWER(module.name) LIKE LOWER(:name)', { name: `%${filters.search}%` });

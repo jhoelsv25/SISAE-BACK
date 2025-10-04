@@ -1,4 +1,4 @@
-import { Column, Entity, ManyToMany, ManyToOne } from 'typeorm';
+import { Column, Entity, JoinTable, ManyToMany, ManyToOne } from 'typeorm';
 import { BaseEntity } from '../../../common/entities/base.entity';
 import { ActionEntity } from '../../actions/entities/action.entity';
 import { ModuleEntity } from '../../modules/entities/module.entity';
@@ -24,8 +24,13 @@ export class PermissionEntity extends BaseEntity {
   @Column({ type: 'text', nullable: true })
   description?: string;
 
-  @ManyToOne(() => ActionEntity, { eager: true, nullable: false, onDelete: 'RESTRICT' })
-  action: ActionEntity;
+  @ManyToMany(() => ActionEntity, { eager: true })
+  @JoinTable({
+    name: 'permission_actions', // tabla pivote
+    joinColumn: { name: 'permission_id', referencedColumnName: 'id' },
+    inverseJoinColumn: { name: 'action_id', referencedColumnName: 'id' },
+  })
+  actions: ActionEntity[];
 
   @ManyToOne(() => ModuleEntity, {
     eager: true,

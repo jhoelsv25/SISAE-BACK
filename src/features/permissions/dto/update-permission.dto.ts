@@ -18,11 +18,11 @@ export class UpdatePermissionDto extends PartialType(CreatePermissionDto) {
   @ApiProperty({
     description: 'Acción que representa el permiso',
     example: 'f47ac10b-58cc-4372-a567-0e02b2c3d479',
-    required: true,
+    required: false,
   })
   @IsOptional()
-  @IsUUID('4', { message: 'La acción debe ser un UUID válido' })
-  actionId: string;
+  @IsUUID('4', { each: true, message: 'La acción debe ser un UUID válido' })
+  actionIds: string[];
 
   @ApiProperty({
     description: 'Descripción del permiso',
