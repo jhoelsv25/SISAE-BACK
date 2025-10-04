@@ -10,8 +10,10 @@ if [ ! -f ".env" ]; then
     exit 1
 fi
 
-# Cargar variables de entorno
-source .env
+# Cargar variables de entorno de forma segura
+set -a
+source .env 2>/dev/null
+set +a
 
 # Verificar si Docker está ejecutándose
 if ! docker info > /dev/null 2>&1; then
