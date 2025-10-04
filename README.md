@@ -14,6 +14,14 @@
   <img src="https://img.shields.io/badge/Docker-2496ED?style=flat&logo=docker&logoColor=white" alt="Docker" />
 </p>
 
+<p align="center">
+  <img src="https://img.shields.io/badge/status-active-success.svg" alt="Status" />
+  <img src="https://img.shields.io/badge/migrations-ready-blue.svg" alt="Migrations" />
+  <img src="https://img.shields.io/badge/timezone-UTC-green.svg" alt="Timezone" />
+  <img src="https://img.shields.io/badge/env-simplified-orange.svg" alt="Environment" />
+  <img src="https://img.shields.io/badge/docs-5_guides-informational.svg" alt="Documentation" />
+</p>
+
 ## 📋 Descripción
 
 SISAE Backend es una API REST robusta y escalable diseñada para gestionar de manera integral el seguimiento académico estudiantil. Proporciona funcionalidades completas para la administración de usuarios, perfiles, roles, permisos, módulos académicos y un sistema de auditoría completo.
@@ -81,25 +89,43 @@ src/
 Crea un archivo `.env` basado en `.env.example`:
 
 ```bash
-# Base de datos
+# 📝 Copiar archivo de ejemplo
+$ cp .env.example .env
+
+# ✏️ Editar con tus configuraciones
+$ nano .env
+```
+
+**Variables principales:**
+
+```env
+# 🗄️ Base de Datos (usado por la app y Docker Compose)
 DB_HOST=localhost
 DB_PORT=5432
-DB_USERNAME=sisae_user
-DB_PASSWORD=sisae_password
-DB_NAME=sisae_db
+DB_USERNAME=jhoelsv
+DB_PASSWORD=admin123
+DB_NAME=gestion_academica
 DB_LOGGING=false
 
-# JWT
-JWT_SECRET=tu_jwt_secret_muy_seguro
+# 🐳 Docker
+POSTGRES_CONTAINER_NAME=sisae_postgres_db
+
+# 🔐 JWT
+JWT_SECRET=tu_jwt_secret_muy_seguro_cambiar_en_produccion
 JWT_EXPIRES_IN=24h
 
-# Aplicación
+# 🌐 CORS
+CORS_ORIGIN=http://localhost:3000,http://localhost:4200
+CORS_CREDENTIALS=true
+
+# 🚀 Aplicación
 PORT=3000
 NODE_ENV=development
-
-# CORS
-CORS_ORIGIN=http://localhost:3000,http://localhost:4200
 ```
+
+**✨ Simplificación:** Ya no necesitas duplicar variables `POSTGRES_*` - Docker Compose reutiliza las variables `DB_*`.
+
+📚 Ver guía completa: [`docs/ENV-VARIABLES.md`](docs/ENV-VARIABLES.md)
 
 ### Instalación
 
@@ -152,22 +178,138 @@ $ npm run build
 
 ## 📊 Base de Datos
 
-### Migraciones
+### 🎯 Quick Start
 
 ```bash
-# Generar migración
-$ npm run migration:generate -- src/migrations/MigrationName
+# Iniciar PostgreSQL en Docker
+$ npm run db:start
 
-# Ejecutar migraciones
-$ npm run migration:run
+# Verificar que todo funciona
+$ npm run health
 
-# Revertir migración
-$ npm run migration:revert
+# Desarrollo completo (reset + migraciones + seeds)
+$ npm run dev
 ```
 
-### Sincronización (Solo desarrollo)
+### 🗄️ Gestión de Base de Datos
 
-La sincronización automática está habilitada en desarrollo. Las entidades se sincronizan automáticamente con la base de datos.
+```bash
+# Docker
+$ npm run db:start          # Iniciar PostgreSQL
+$ npm run db:stop           # Detener PostgreSQL
+$ npm run db:restart        # Reiniciar PostgreSQL
+$ npm run db:logs           # Ver logs
+$ npm run db:reset          # Reset completo (⚠️ ELIMINA DATOS)
+$ npm run db:test           # Probar conexión
+
+# Migraciones
+$ npm run migration:generate NombreMigracion  # Generar migración
+$ npm run migration:create NombreMigracion    # Crear vacía
+$ npm run migration:run                       # Ejecutar migraciones
+$ npm run migration:revert                    # Revertir última
+$ npm run migration:show                      # Ver migraciones
+
+# Procedimientos Almacenados
+$ npm run db:procedures                       # Aplicar procedimientos SQL
+
+# Datos de Prueba
+$ npm run seed              # Ejecutar seeds (usuarios, roles, permisos)
+
+# Verificación
+$ npm run health            # Estado completo del sistema
+$ npm run timezone          # Verificar configuración UTC
+```
+
+### 🚀 Workflows Comunes
+
+**Primera vez / Reset completo:**
+
+```bash
+npm run dev
+# Esto hace: reset → migraciones → procedimientos → seeds → start:dev
+```
+
+**Desarrollo diario:**
+
+```bash
+npm run start:dev
+# Solo inicia la aplicación (DB ya configurada)
+```
+
+**Después de crear una entidad:**
+
+```bash
+npm run migration:generate CrearTablaEstudiantes
+npm run migration:run
+```
+
+### ⚙️ Configuración
+
+#### Variables de Entorno Simplificadas
+
+Ahora solo necesitas **una sola fuente de variables** para la app y Docker:
+
+```env
+# 📝 .env - Variables usadas por la aplicación Y Docker Compose
+DB_HOST=localhost
+DB_PORT=5432
+DB_USERNAME=jhoelsv
+DB_PASSWORD=admin123
+DB_NAME=gestion_academica
+DB_LOGGING=false
+
+POSTGRES_CONTAINER_NAME=sisae_postgres_db
+```
+
+✅ **Beneficios:**
+
+- Sin duplicación (DRY - Don't Repeat Yourself)
+- Menos errores de sincronización
+- Más fácil de mantener
+
+📚 Ver guía completa: [`docs/ENV-VARIABLES.md`](docs/ENV-VARIABLES.md)
+
+### 🌍 Zona Horaria UTC
+
+El sistema usa **UTC** en todas las capas:
+
+- PostgreSQL: `TZ=UTC`, `PGTZ=UTC`
+- Node.js: `process.env.TZ = 'UTC'`
+- TypeORM: `extra.timezone = 'UTC'`
+
+```bash
+# Verificar configuración UTC
+$ npm run timezone
+```
+
+📚 Ver guía completa: [`docs/TIMEZONE.md`](docs/TIMEZONE.md)
+
+### 📁 Estructura de Base de Datos
+
+```
+src/database/
+├── data-source.ts          # Configuración TypeORM CLI
+├── database.service.ts     # Servicio de base de datos
+├── migrations/             # 🗄️ Migraciones TypeORM
+│   └── 1234567890-CreateUsersTable.ts
+├── procedures/             # 📦 Procedimientos Almacenados
+│   ├── audit-log-insert.sql
+│   ├── permission-check.sql
+│   └── clean-old-records.sql
+└── seeds/                  # 🌱 Datos iniciales
+    ├── seed.ts
+    ├── user-default.seed.ts
+    ├── roles-seed.ts
+    └── permissions-seed.ts
+```
+
+### 📚 Documentación Adicional
+
+- [`docs/SETUP-SUMMARY.md`](docs/SETUP-SUMMARY.md) - Configuración completa del sistema
+- [`docs/ENV-VARIABLES.md`](docs/ENV-VARIABLES.md) - Guía de variables de entorno
+- [`docs/ENV-SIMPLIFICATION.md`](docs/ENV-SIMPLIFICATION.md) - Detalles de la simplificación
+- [`docs/TIMEZONE.md`](docs/TIMEZONE.md) - Configuración de zona horaria
+- [`scripts/README.md`](scripts/README.md) - Guía de scripts
 
 ## 🧪 Testing
 
@@ -359,14 +501,31 @@ $ npm run type-check
 
 ## 📋 Roadmap
 
+### ✅ Completado
+
+- [x] **Migraciones TypeORM**: Sistema completo con scripts automatizados
+- [x] **Procedimientos Almacenados**: Directorio y sistema de aplicación
+- [x] **UTC Timezone**: Configuración en 3 capas (PostgreSQL, Node.js, TypeORM)
+- [x] **Scripts Automatizados**: 17+ scripts para gestión de BD
+- [x] **Variables de Entorno**: Simplificación DRY (sin duplicación)
+- [x] **Sistema de Auditoría**: Tracking automático de operaciones
+- [x] **Documentación Completa**: 5 guías en `docs/`
+- [x] **Health Checks**: Verificación de sistema completo
+
+### 🚧 En Progreso
+
+- [ ] **Testing**: Aumentar cobertura a 90%+
+- [ ] **CI/CD**: Pipeline automatizado
+
+### 📅 Planificado
+
 - [ ] **Autenticación OAuth2**: Google, Microsoft, GitHub
 - [ ] **WebSockets**: Notificaciones en tiempo real
 - [ ] **Caching**: Redis para optimización
 - [ ] **Rate Limiting**: Control avanzado de límites
 - [ ] **Métricas**: Prometheus + Grafana
-- [ ] **Testing**: Cobertura 90%+
-- [ ] **CI/CD**: Pipeline automatizado
-- [ ] **Backup Automático**: Respaldos programados
+- [ ] **Backup Automático**: Respaldos programados de BD
+- [ ] **API Versioning**: Versionado de endpoints
 
 ## 🐛 Reporte de Bugs
 
