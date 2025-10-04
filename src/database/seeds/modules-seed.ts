@@ -235,7 +235,7 @@ export async function seedMenuModules(dataSource: DataSource) {
           const permission = permissionRepository.create({
             key: permissionKey,
             name: `${menuItem.label} - ${actionKey}`,
-            action: actionEntity,
+            actions: [actionEntity], // Array de acciones
             module: module,
           });
           await permissionRepository.save(permission);
