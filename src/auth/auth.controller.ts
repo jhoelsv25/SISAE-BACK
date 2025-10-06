@@ -1,5 +1,6 @@
 import { Body, Controller, Get, Param, Post, Req, Res } from '@nestjs/common';
 import { Request, Response } from 'express';
+import { ErrorHandler } from '../common/exceptions';
 import { AuthCookieService } from './auth-cookie.service';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
@@ -12,48 +13,49 @@ export class AuthController {
   ) {}
 
   @Post('login')
-  async login(@Body() loginDto: LoginDto, @Res() res: Response) {
+  async login(@Body() loginDto: LoginDto, @Res({ passthrough: true }) res: Response) {
     const result = await this.authService.login(loginDto);
     const { accessToken, refreshToken, user, modules } = result.data;
+
+    // Establecer cookies
     await this.authCookieService.setAuthCookies(res, accessToken, refreshToken);
-    res.json({ message: result.message, user, accessToken, modules });
+
+    // NestJS manejará automáticamente la serialización
+    return { message: result.message, user, accessToken, modules };
   }
 
   @Post('refresh-token')
-  async refresh(@Req() req: Request, @Res() res: Response) {
-    console.log('Cookies recibidas:', req.cookies);
+  async refresh(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
     const refreshToken = req.cookies?.refreshToken;
     if (!refreshToken) {
-      return res.status(401).json({
-        message: 'No se proporcionó el refresh token',
-        cookies: req.cookies,
-        headers: req.headers,
-      });
+      ErrorHandler.unauthorized('No se proporcionó el refresh token', 'RefreshToken');
     }
+
     const result = await this.authService.refresh(refreshToken);
     const { accessToken } = result.data;
+
+    // Establecer cookies
     await this.authCookieService.setAuthCookies(res, accessToken, refreshToken);
-    res.json(result);
+
+    // NestJS manejará automáticamente la serialización
+    return result;
   }
 
   @Get('logout')
-  async logout(@Res() res: Response) {
-    this.authCookieService.clearAuthCookies(res);
-    res.json(await this.authService.logout());
+  async logout(@Res({ passthrough: true }) res: Response) {
+    await this.authCookieService.clearAuthCookies(res);
+    return await this.authService.logout();
   }
 
   @Get('check-token')
-  async checkToken(@Req() req: Request, @Res() res: Response) {
+  async checkToken(@Req() req: Request) {
     const accessToken = req.cookies?.accessToken;
+
     if (!accessToken) {
-      return res.status(401).json({
-        message: 'No se proporcionó el access token',
-        cookies: req.cookies,
-        headers: req.headers,
-      });
+      ErrorHandler.unauthorized('No se proporcionó el access token', 'CheckToken');
     }
-    const result = await this.authService.checkToken(accessToken);
-    res.json(result);
+
+    return await this.authService.checkToken(accessToken);
   }
 
   @Get('modules/:id')
