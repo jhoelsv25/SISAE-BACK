@@ -118,16 +118,7 @@ export class AuthService {
       return {
         message: 'Token renovado',
         data: {
-          user: {
-            id: user.id,
-            username: user.username,
-            email: user.email,
-            isActive: user.isActive,
-            role: {
-              id: user.role?.id || null,
-              name: user.role?.name || null,
-            },
-          },
+          user,
           accessToken: newAccessToken,
         },
       };
