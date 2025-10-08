@@ -42,8 +42,8 @@ export class CreateModuleDto {
     maxLength: 100,
   })
   @IsOptional()
-  @IsNumber({}, { message: 'La posición debe ser un número' })
-  position: number;
+  @IsNumber({}, { message: 'El orden debe ser un número' })
+  order: number;
 
   @ApiProperty({
     description: 'Ruta de navegación del módulo en la aplicación',

@@ -1,5 +1,6 @@
-import { Column, Entity } from 'typeorm';
+import { Column, Entity, OneToMany } from 'typeorm';
 import { BaseEntity } from '../../../common/entities/base.entity';
+import { PermissionEntity } from '../../permissions/entities/permission.entity';
 
 @Entity('actions')
 export class ActionEntity extends BaseEntity {
@@ -11,4 +12,10 @@ export class ActionEntity extends BaseEntity {
 
   @Column({ type: 'text', nullable: true })
   description?: string;
+
+  @Column({ type: 'boolean', default: false })
+  isDefault: boolean;
+
+  @OneToMany(() => PermissionEntity, permission => permission.action)
+  permissions: PermissionEntity[];
 }

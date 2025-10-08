@@ -20,7 +20,7 @@ export class PermissionReadRepository {
       const query = this.repo
         .createQueryBuilder('permission')
         .leftJoinAndSelect('permission.module', 'module')
-        .leftJoinAndSelect('permission.actions', 'action');
+        .leftJoinAndSelect('permission.action', 'action');
 
       if (filters?.search) {
         query.andWhere('permission.name ILIKE :search OR permission.key ILIKE :search', {
@@ -50,10 +50,15 @@ export class PermissionReadRepository {
       // Mapear para devolver el módulo solo con id y name
       const mappedData = data.map(perm => ({
         id: perm.id,
+        key: perm.key,
         name: perm.name,
-        actions: perm.actions, // Array de acciones
+        action: perm.action
+          ? { id: perm.action.id, key: perm.action.key, name: perm.action.name }
+          : null,
         description: perm.description,
-        module: perm.module ? { id: perm.module.id, name: perm.module.name } : null,
+        module: perm.module
+          ? { id: perm.module.id, key: perm.module.key, name: perm.module.name }
+          : null,
         createdAt: perm.createdAt,
         updatedAt: perm.updatedAt,
       }));
@@ -74,7 +79,7 @@ export class PermissionReadRepository {
       const permission = await this.repo
         .createQueryBuilder('permission')
         .leftJoinAndSelect('permission.module', 'module')
-        .leftJoinAndSelect('permission.actions', 'action')
+        .leftJoinAndSelect('permission.action', 'action')
         .where('permission.id = :id', { id })
         .getOne();
 

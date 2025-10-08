@@ -1,6 +1,14 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
-import { IsArray, IsOptional, IsString, IsUUID, MaxLength, MinLength } from 'class-validator';
+import {
+  IsArray,
+  IsBoolean,
+  IsOptional,
+  IsString,
+  IsUUID,
+  MaxLength,
+  MinLength,
+} from 'class-validator';
 
 export class CreateRoleDto {
   @ApiProperty({
@@ -26,6 +34,24 @@ export class CreateRoleDto {
   @MaxLength(255, { message: 'La descripción no puede tener más de 255 caracteres' })
   @Transform(({ value }) => value?.trim())
   description?: string;
+
+  @ApiProperty({
+    description: '¿Es un rol del sistema?',
+    example: false,
+    required: false,
+  })
+  @IsOptional()
+  @IsBoolean({ message: 'El campo isSystem debe ser un booleano' })
+  isSystem?: boolean;
+
+  @ApiProperty({
+    description: '¿Está activo el rol?',
+    example: true,
+    required: false,
+  })
+  @IsOptional()
+  @IsBoolean({ message: 'El campo isActive debe ser un booleano' })
+  isActive?: boolean;
 
   @ApiProperty({
     description: 'Lista de IDs de permisos asignados al rol',

@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { ActionEntity } from '../../actions/entities/action.entity';
 import { ModuleEntity } from '../../modules/entities/module.entity';
 import { CreatePermissionDto } from '../dto/create-permission.dto';
@@ -21,28 +21,41 @@ export class PermissionWriteRepository {
         select: ['id', 'key', 'name'],
       });
 
-      if (!module) throw new NotFoundException('Módulo no encontrado');
+      if (!module) {
+        throw new NotFoundException('Módulo no encontrado');
+      }
 
-      const actions = await manager.findByIds(ActionEntity, dto.actionIds || []);
-      if (!actions.length) throw new NotFoundException('Acciones no encontradas');
-
-      // Generar key tipo "moduleKey:action1,action2"
-      const actionKeys = actions.map(a => a.key).join(',');
-      const key = `${module.key}:${actionKeys}`;
-
-      const permission = manager.create(PermissionEntity, {
-        key,
-        name: dto.name,
-        description: dto.description,
-        module,
-        actions,
+      const actions = await manager.findBy(ActionEntity, {
+        id: In(dto.actionIds || []),
       });
 
-      const saved = await manager.save(permission);
+      if (!actions.length) {
+        throw new NotFoundException('Acciones no encontradas');
+      }
+
+      const createdPermissions: PermissionEntity[] = [];
+
+      for (const action of actions) {
+        const key = `${module.key}:${action.key}`;
+
+        const existing = await manager.findOne(PermissionEntity, { where: { key } });
+        if (existing) continue;
+
+        const permission = manager.create(PermissionEntity, {
+          key,
+          name: dto.name,
+          description: dto.description,
+          module,
+          action,
+        });
+
+        const saved = await manager.save(permission);
+        createdPermissions.push(saved);
+      }
 
       return {
-        data: saved,
-        message: 'Permiso creado exitosamente',
+        data: createdPermissions,
+        message: `Se crearon ${createdPermissions.length} permisos`,
       };
     });
   }
@@ -51,35 +64,41 @@ export class PermissionWriteRepository {
     return await this.repo.manager.transaction(async manager => {
       const permission = await manager.findOne(PermissionEntity, {
         where: { id },
-        relations: ['actions', 'module'],
+        relations: ['action', 'module'],
       });
 
-      if (!permission) throw new NotFoundException('Permiso no encontrado');
+      if (!permission) {
+        throw new NotFoundException('Permiso no encontrado');
+      }
 
       let module = permission.module;
-      let actions = permission.actions;
+      let action = permission.action;
 
+      // 🔁 Si cambia el módulo
       if (dto.moduleId) {
         const newModule = await manager.findOne(ModuleEntity, { where: { id: dto.moduleId } });
         if (!newModule) throw new NotFoundException('Módulo no encontrado');
         module = newModule;
-        permission.module = module;
       }
 
-      if (dto.actionIds) {
-        const newActions = await manager.findByIds(ActionEntity, dto.actionIds);
-        if (!newActions.length) throw new NotFoundException('Acciones no encontradas');
-        actions = newActions;
-        permission.actions = actions;
+      if (dto.actionIds && dto.actionIds.length > 0) {
+        const newAction = await manager.findOne(ActionEntity, {
+          where: { id: dto.actionIds[0] },
+        });
+        if (!newAction) throw new NotFoundException('Acción no encontrada');
+        action = newAction;
       }
 
-      // Regenerar key
-      const actionKeys = actions.map(a => a.key).join(',');
-      permission.key = `${module.key}:${actionKeys}`;
+      const key = `${module.key}:${action.key}`;
+      permission.key = key;
+      permission.module = module;
+      permission.action = action;
 
-      Object.assign(permission, dto); // otros campos
+      if (dto.name !== undefined) permission.name = dto.name;
+      if (dto.description !== undefined) permission.description = dto.description;
 
       const saved = await manager.save(permission);
+
       return {
         data: saved,
         message: 'Permiso actualizado exitosamente',

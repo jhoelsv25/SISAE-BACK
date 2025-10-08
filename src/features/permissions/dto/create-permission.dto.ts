@@ -1,6 +1,14 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
-import { IsArray, IsNotEmpty, IsString, IsUUID, MaxLength, MinLength } from 'class-validator';
+import {
+  IsArray,
+  IsBoolean,
+  IsNotEmpty,
+  IsString,
+  IsUUID,
+  MaxLength,
+  MinLength,
+} from 'class-validator';
 
 export class CreatePermissionDto {
   @ApiProperty({
@@ -45,4 +53,14 @@ export class CreatePermissionDto {
   @IsNotEmpty({ message: 'El ID del módulo no puede estar vacío' })
   @IsUUID(4, { message: 'El ID del módulo debe ser un UUID válido' })
   moduleId: string;
+
+  @ApiProperty({
+    description: '¿Está activo el permiso?',
+    example: true,
+    required: false,
+  })
+  @IsNotEmpty({ message: 'El campo isActive no puede estar vacío' })
+  @IsBoolean({ message: 'El campo isActive debe ser un booleano' })
+  @Transform(({ value }) => (value === undefined ? true : value))
+  isActive?: boolean = true;
 }

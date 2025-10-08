@@ -20,6 +20,18 @@ export class RoleEntity extends BaseEntity {
   })
   description?: string;
 
+  @Column({
+    type: 'boolean',
+    default: false,
+  })
+  isSystem: boolean;
+
+  @Column({
+    type: 'boolean',
+    default: false,
+  })
+  isActive: boolean;
+
   @OneToMany(() => UserEntity, user => user.role, {
     onDelete: 'CASCADE',
   })

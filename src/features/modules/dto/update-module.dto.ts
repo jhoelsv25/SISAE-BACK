@@ -46,8 +46,8 @@ export class UpdateModuleDto extends PartialType(CreateModuleDto) {
     required: false,
   })
   @IsOptional()
-  @IsNumber({}, { message: 'La posición debe ser un número' })
-  position?: number;
+  @IsNumber({}, { message: 'El orden debe ser un número' })
+  order?: number;
 
   @ApiProperty({
     description: 'Ruta de navegación del módulo en la aplicación',

@@ -1,6 +1,14 @@
 import { ApiProperty, PartialType } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
-import { IsArray, IsOptional, IsString, IsUUID, MaxLength, MinLength } from 'class-validator';
+import {
+  IsArray,
+  IsBoolean,
+  IsOptional,
+  IsString,
+  IsUUID,
+  MaxLength,
+  MinLength,
+} from 'class-validator';
 import { CreateRoleDto } from './create-role.dto';
 
 export class UpdateRoleDto extends PartialType(CreateRoleDto) {
@@ -17,6 +25,24 @@ export class UpdateRoleDto extends PartialType(CreateRoleDto) {
   @MaxLength(100, { message: 'El nombre del rol no puede tener más de 100 caracteres' })
   @Transform(({ value }) => value?.trim())
   name?: string;
+
+  @ApiProperty({
+    description: '¿Es un rol del sistema?',
+    example: false,
+    required: false,
+  })
+  @IsOptional()
+  @IsBoolean({ message: 'El campo isSystem debe ser un booleano' })
+  isSystem?: boolean;
+
+  @ApiProperty({
+    description: '¿Está activo el rol?',
+    example: true,
+    required: false,
+  })
+  @IsOptional()
+  @IsBoolean({ message: 'El campo isActive debe ser un booleano' })
+  isActive?: boolean;
 
   @ApiProperty({
     description: 'Descripción detallada del rol y sus responsabilidades',

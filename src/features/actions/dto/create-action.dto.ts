@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsNotEmpty, IsString, MaxLength } from 'class-validator';
+import { IsBoolean, IsNotEmpty, IsOptional, IsString, MaxLength } from 'class-validator';
 
 export class CreateActionDto {
   @ApiProperty({
@@ -21,4 +21,9 @@ export class CreateActionDto {
   @IsString({ message: 'La descripción debe ser una cadena de texto' })
   @MaxLength(255, { message: 'La descripción no debe exceder 255 caracteres' })
   description?: string;
+
+  @ApiProperty({ example: true, description: '¿Es la acción por defecto?' })
+  @IsOptional()
+  @IsBoolean({ message: 'El campo isDefault debe ser un booleano' })
+  isDefault?: boolean;
 }
