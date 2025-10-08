@@ -190,9 +190,19 @@ export async function seedMenuModules(dataSource: DataSource) {
     menuItem: MenuItem,
     parent: ModuleEntity | null = null,
   ): Promise<ModuleEntity> {
+    // Extraer el key desde el route (última parte de la ruta)
+    const routeParts = menuItem.route.split('/').filter(part => part.length > 0);
+    const key = routeParts[routeParts.length - 1]; // Última parte, ej: 'users', 'roles', 'dashboard'
+
+    // Construir el path basado en el padre
+    let path = key;
+    if (parent?.path) {
+      path = `${parent.path}/${key}`;
+    }
+
     // Check if module already exists
     let module = await moduleRepository.findOne({
-      where: { path: menuItem.route },
+      where: { key },
     });
 
     if (!module) {
@@ -200,42 +210,37 @@ export async function seedMenuModules(dataSource: DataSource) {
       module = moduleRepository.create({
         name: menuItem.label,
         description: `Módulo de ${menuItem.label}`,
-        path: menuItem.route,
+        path: path,
+        key: key,
         icon: menuItem.icon,
-        position: menuItem.position || 0,
+        order: menuItem.position || 0,
         parent: parent,
-        key: menuItem.id, // Asigna el key único del módulo
       });
       await moduleRepository.save(module);
 
       // Create standard CRUD permissions for the module
-      const actions = ['read', 'write', 'update', 'delete'];
-      // El key del permiso será solo el nombre base del módulo, sin prefijos tipo admin- o administration-
-      let moduleKey = menuItem.id
-        .replace(/^admin-/, '')
-        .replace(/^administration-/, '')
-        .replace(/-/g, '_')
-        .replace(/^modules_/, 'modules');
-      if (moduleKey === '') moduleKey = 'modules';
+      const actions = ['create', 'read', 'update', 'delete'];
+
       for (const actionKey of actions) {
         // Busca la entidad de acción por key
-        let actionEntity = await dataSource
-          .getRepository(ActionEntity)
-          .findOne({ where: { key: actionKey } });
+        let actionEntity = await actionRepository.findOne({ where: { key: actionKey } });
         if (!actionEntity) {
-          actionEntity = dataSource
-            .getRepository(ActionEntity)
-            .create({ key: actionKey, name: actionKey });
-          await dataSource.getRepository(ActionEntity).save(actionEntity);
+          actionEntity = actionRepository.create({
+            key: actionKey,
+            name: actionKey.charAt(0).toUpperCase() + actionKey.slice(1),
+          });
+          await actionRepository.save(actionEntity);
         }
-        const permissionKey = `${moduleKey}:${actionKey}`;
+
+        const permissionKey = `${key}:${actionKey}`;
+
         // Verifica si el permiso ya existe antes de crearlo
         let exists = await permissionRepository.findOne({ where: { key: permissionKey } });
         if (!exists) {
           const permission = permissionRepository.create({
             key: permissionKey,
             name: `${menuItem.label} - ${actionKey}`,
-            actions: [actionEntity], // Array de acciones
+            action: actionEntity, // Una sola acción (singular)
             module: module,
           });
           await permissionRepository.save(permission);

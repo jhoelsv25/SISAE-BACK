@@ -1,25 +1,22 @@
-// audit/interceptors/audit.interceptor.ts
 import { CallHandler, ExecutionContext, Injectable, NestInterceptor } from '@nestjs/common';
-import { Reflector } from '@nestjs/core';
 import { Observable, tap } from 'rxjs';
 import { DataSource } from 'typeorm';
+import { getAuditUser } from '../context/audit.context';
 import { AuditLog } from '../entities/audit-log.entity';
 
 @Injectable()
 export class AuditInterceptor implements NestInterceptor {
-  constructor(
-    private dataSource: DataSource,
-    private reflector: Reflector,
-  ) {}
+  constructor(private dataSource: DataSource) {}
 
   intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
     const request = context.switchToHttp().getRequest();
-    const user = request.user;
-
     const method = request.method;
+    const entityName = context.getHandler().name;
 
     return next.handle().pipe(
       tap(async response => {
+        const userId = getAuditUser();
+
         const action =
           method === 'POST'
             ? 'CREATE'
@@ -29,23 +26,21 @@ export class AuditInterceptor implements NestInterceptor {
                 ? 'DELETE'
                 : null;
 
-        if (!action || !user) return;
+        if (!action || !userId) return;
 
-        const entityName = context.getHandler().name;
-
-        const auditRepo = this.dataSource.getRepository(AuditLog);
-
-        await auditRepo.save(
-          auditRepo.create({
-            userId: user.id,
+        try {
+          const repo = this.dataSource.getRepository(AuditLog);
+          await repo.save({
+            userId,
             entity: entityName,
             entityId: response?.id || null,
-            before: {}, // si es update, puedes inyectar esto antes del cambio
-            after: response,
             action,
-            description: `${user.username} realizó ${action} sobre ${entityName}`,
-          }),
-        );
+            after: response,
+            description: `El usuario ${userId} realizó ${action} sobre ${entityName}`,
+          });
+        } catch (err) {
+          console.warn('Audit log failed:', err.message);
+        }
       }),
     );
   }

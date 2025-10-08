@@ -7,57 +7,62 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { NestFactory, Reflector } from '@nestjs/core';
 import { SwaggerModule } from '@nestjs/swagger';
+import * as compression from 'compression';
 import * as cookieParser from 'cookie-parser';
+import rateLimit from 'express-rate-limit';
 import helmet from 'helmet';
 import { DataSource } from 'typeorm';
 import { AppModule } from './app.module';
-import { AuditInterceptor } from './audit/interceptors/audit.interceptor';
 import { GlobalExceptionFilter } from './common/exceptions/http-exception.filter';
 import { corsConfig } from './config/cors.config';
 import { swaggerConfig } from './config/swagger.config';
 
 async function bootstrap() {
-  // Configurar zona horaria UTC para toda la aplicación
   process.env.TZ = 'UTC';
-
   const logger = new Logger('Bootstrap');
 
   const app = await NestFactory.create(AppModule);
   const configService = app.get(ConfigService);
 
-  // Verificar conexión a la base de datos
+  // Verificar conexión a la DB
   try {
     const dataSource = app.get(DataSource);
     await dataSource.query('SELECT 1');
     logger.log('✅ Database connection successful!');
   } catch (error) {
     logger.error('❌ Database connection failed:', error.message);
-    logger.error('🔧 Please check your database configuration and ensure the database is running');
-    logger.error('💡 Try running: ./scripts/db-start.sh');
-
-    // No terminar la aplicación, pero mostrar advertencia
     logger.warn('⚠️ Application will continue without database connection');
   }
 
-  //CORS setup
+  // Middlewares globales
+  app.use(cookieParser());
+  app.use(helmet({ contentSecurityPolicy: true }));
+  app.use(compression());
   app.enableCors(corsConfig(configService));
 
-  //cookie parser setup
-  app.use(cookieParser());
+  // Rate limiting por IP (100 requests/minuto)
+  app.use(
+    rateLimit({
+      windowMs: 60 * 1000, // 1 minuto
+      max: 100, // máximo 100 requests por IP
+      message: {
+        statusCode: 429,
+        message: 'Demasiadas solicitudes. Intenta nuevamente más tarde.',
+      },
+    }),
+  );
 
-  // Exception filter setup
-  app.useGlobalFilters(new GlobalExceptionFilter());
-
-  //prefix setup
+  // Prefijo global
   app.setGlobalPrefix('api');
 
-  //pipe setup
+  // Filtros y pipes globales
+  app.useGlobalFilters(new GlobalExceptionFilter());
   app.useGlobalPipes(
     new ValidationPipe({
-      whitelist: true, // Elimina propiedades no definidas en el DTO
-      forbidNonWhitelisted: true, // Lanza un error si hay propiedades no definidas en el DTO
-      transform: true, // Transforma los payloads a los tipos definidos en los DTOs
-      disableErrorMessages: false, // Mostrar mensajes de error detallados
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transform: true,
+      disableErrorMessages: false,
       exceptionFactory: errors => {
         const allMessages = errors
           .map(error => Object.values(error.constraints).join(', '))
@@ -74,29 +79,20 @@ async function bootstrap() {
     }),
   );
 
-  // Helmet setup
-  app.use(
-    helmet({
-      contentSecurityPolicy: true, // Configura la política de seguridad de contenido
-    }),
-  );
-  // Interceptor setup
+  // Serialización global
   const reflector = app.get(Reflector);
-  const dataSource = app.get(DataSource);
-
-  // Configurar serialización global
   app.useGlobalInterceptors(
     new ClassSerializerInterceptor(reflector, {
       strategy: 'exposeAll',
       enableImplicitConversion: true,
     }),
-    new AuditInterceptor(dataSource, reflector),
   );
 
-  //swagger setup
+  // Swagger
   const document = SwaggerModule.createDocument(app, swaggerConfig);
   SwaggerModule.setup('docs', app, document);
 
+  // Escuchar puerto
   const port = configService.get<number>('port') || 3000;
   await app.listen(port);
 

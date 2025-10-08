@@ -6,107 +6,67 @@ import {
   RemoveEvent,
   UpdateEvent,
 } from 'typeorm';
+import { getAuditUser } from '../context/audit.context';
 import { AuditLog } from '../entities/audit-log.entity';
 
 @EventSubscriber()
 export class AuditSubscriber implements EntitySubscriberInterface {
   private readonly logger = new Logger(AuditSubscriber.name);
 
-  constructor() {
-    this.logger.log('AuditSubscriber initialized');
-  }
-
   async afterInsert(event: InsertEvent<any>) {
+    if (event.metadata.name === 'AuditLog') return;
+    const userId = getAuditUser();
+
     try {
-      if (event.metadata.name === 'AuditLog') return; // Evitar auditoría recursiva
-
-      const connection = event.manager.connection;
-      if (!connection) {
-        this.logger.warn('No connection available for audit logging');
-        return;
-      }
-
-      // Validar que la entidad y su id existan
-      if (!event.entity || typeof event.entity.id === 'undefined') {
-        this.logger.error('Entidad o ID indefinido en AuditSubscriber.afterInsert');
-        return;
-      }
-
-      const repo = connection.getRepository(AuditLog);
-      await repo.save({
-        userId: event.queryRunner?.data?.userId || null,
+      await event.manager.getRepository(AuditLog).save({
+        userId,
         entity: event.metadata.name,
-        entityId: event.entity.id || null,
+        entityId: event.entity?.id,
         before: null,
         after: event.entity,
         action: 'CREATE',
-        description: `Se ha creado una nueva entidad de tipo ${event.metadata.name}`,
+        description: `Inserción en ${event.metadata.name}`,
       });
-
-      this.logger.log(`Audit log created for INSERT on ${event.metadata.name}`);
-    } catch (error) {
-      this.logger.error('Error creating audit log for INSERT:', error);
+    } catch (err) {
+      this.logger.warn('Audit insert failed:', err.message);
     }
   }
 
   async beforeUpdate(event: UpdateEvent<any>) {
+    if (event.metadata.name === 'AuditLog') return;
+    const userId = getAuditUser();
+
     try {
-      if (event.metadata.name === 'AuditLog') return; // Evitar auditoría recursiva
-
-      const connection = event.manager.connection;
-      if (!connection) {
-        this.logger.warn('No connection available for audit logging');
-        return;
-      }
-
-      const repo = connection.getRepository(AuditLog);
-      const before = event.databaseEntity || event.entity;
-      const after = event.entity;
-      if (!before || !after) return;
-
-      await repo.save({
-        userId: event.queryRunner?.data?.userId || null,
+      await event.manager.getRepository(AuditLog).save({
+        userId,
         entity: event.metadata.name,
-        entityId: before.id,
-        before,
-        after,
+        entityId: event.entity?.id,
+        before: event.databaseEntity,
+        after: event.entity,
         action: 'UPDATE',
-        description: `Se ha actualizado la entidad de tipo ${event.metadata.name} con ID ${event?.entity?.id}`,
+        description: `Actualización en ${event.metadata.name}`,
       });
-
-      this.logger.log(`Audit log created for UPDATE on ${event.metadata.name}`);
-    } catch (error) {
-      this.logger.error('Error creating audit log for UPDATE:', error);
+    } catch (err) {
+      this.logger.warn('Audit update failed:', err.message);
     }
   }
 
   async beforeRemove(event: RemoveEvent<any>) {
+    if (event.metadata.name === 'AuditLog') return;
+    const userId = getAuditUser();
+
     try {
-      if (event.metadata.name === 'AuditLog') return; // Evitar auditoría recursiva
-
-      const connection = event.manager.connection;
-      if (!connection) {
-        this.logger.warn('No connection available for audit logging');
-        return;
-      }
-
-      const repo = connection.getRepository(AuditLog);
-      const before = event.databaseEntity || event.entity;
-      if (!before) return;
-
-      await repo.save({
-        userId: event.queryRunner?.data?.userId || null,
+      await event.manager.getRepository(AuditLog).save({
+        userId,
         entity: event.metadata.name,
-        entityId: before.id,
-        before,
+        entityId: event.entity?.id,
+        before: event.databaseEntity,
         after: null,
         action: 'DELETE',
-        description: `Se ha eliminado la entidad de tipo ${event.metadata.name} con ID ${before.id}`,
+        description: `Eliminación en ${event.metadata.name}`,
       });
-
-      this.logger.log(`Audit log created for DELETE on ${event.metadata.name}`);
-    } catch (error) {
-      this.logger.error('Error creating audit log for DELETE:', error);
+    } catch (err) {
+      this.logger.warn('Audit delete failed:', err.message);
     }
   }
 }
