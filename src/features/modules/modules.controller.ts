@@ -1,14 +1,4 @@
-import {
-  Body,
-  Controller,
-  Delete,
-  Get,
-  Param,
-  Patch,
-  Post,
-  Query,
-  UseGuards,
-} from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, Put, Query, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { AutoPermission } from '../../auth/decorators/auto-permission.decorator';
 import { AdminRoles, OnlySuperAdmin } from '../../auth/decorators/common-roles.decorator';
@@ -45,7 +35,7 @@ export class ModulesController {
     return await this.modulesService.getById(id);
   }
 
-  @Patch(':id')
+  @Put(':id')
   @AdminRoles()
   async update(@Param('id') id: string, @Body() dto: UpdateModuleDto) {
     return await this.modulesService.update(id, dto);

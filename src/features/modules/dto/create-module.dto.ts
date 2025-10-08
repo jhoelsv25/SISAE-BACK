@@ -6,13 +6,16 @@ import {
   IsNumber,
   IsOptional,
   IsString,
-  Matches,
   MaxLength,
   MinLength,
   ValidateNested,
 } from 'class-validator';
 
 export class CreateModuleDto {
+  //
+  @IsOptional() // Permitir que sea opcional para creación y actualización
+  id?: string | null;
+
   @ApiProperty({
     description: 'Nombre del módulo del sistema',
     example: 'Gestión de Usuarios',
@@ -54,9 +57,6 @@ export class CreateModuleDto {
   @IsOptional()
   @IsString({ message: 'La ruta debe ser una cadena de texto' })
   @MaxLength(255, { message: 'La ruta no puede tener más de 255 caracteres' })
-  @Matches(/^\/[a-zA-Z0-9\/_-]*$/, {
-    message: 'La ruta debe comenzar con / y contener solo caracteres válidos para URLs',
-  })
   @Transform(({ value }) => value?.trim())
   path?: string;
 
@@ -100,4 +100,22 @@ export class CreateModuleDto {
   @MaxLength(100, { message: 'El key del módulo no puede tener más de 100 caracteres' })
   @Transform(({ value }) => value?.trim())
   key: string;
+
+  @ApiProperty({
+    description: 'Indica si es un módulo del sistema (protección especial)',
+    example: true,
+    required: false,
+  })
+  @IsOptional()
+  @IsIn([true, false], { message: 'isSystem debe ser true o false' })
+  isSystem?: boolean; // Indica si es un módulo del sistema (protección especial)
+
+  @ApiProperty({
+    description: 'Indica si es un módulo del sistema (protección especial)',
+    example: true,
+    required: false,
+  })
+  @IsOptional()
+  @IsIn([true, false], { message: 'isActive debe ser true o false' })
+  isActive?: boolean; // Indica si es un módulo activo
 }

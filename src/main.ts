@@ -65,14 +65,19 @@ async function bootstrap() {
       disableErrorMessages: false,
       exceptionFactory: errors => {
         const allMessages = errors
-          .map(error => Object.values(error.constraints).join(', '))
+          .map(error => {
+            if (!error.constraints) {
+              return `${error.property} is invalid`;
+            }
+            return Object.values(error.constraints).join(', ');
+          })
           .join(' | ');
         return new BadRequestException({
           message: allMessages,
           details: errors.map(error => ({
             property: error.property,
             value: error.value,
-            constraints: error.constraints,
+            constraints: error.constraints || {},
           })),
         });
       },
