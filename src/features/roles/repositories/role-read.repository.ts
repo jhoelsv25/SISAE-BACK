@@ -58,6 +58,7 @@ export class RoleReadRepository {
       description?: string;
       path?: string;
       icon?: string;
+      visibility?: 'private' | 'public';
       permissions: string[];
       children?: Array<any>;
     }>;
@@ -74,6 +75,7 @@ export class RoleReadRepository {
       description?: string;
       path?: string;
       icon?: string;
+      visibility?: 'private' | 'public';
       permissions: string[];
       children: ModuleTree[];
       parentId: string | null;
@@ -91,6 +93,7 @@ export class RoleReadRepository {
           description: module.description,
           path: module.path?.startsWith('/') ? module.path : `/${module.path}`,
           icon: module.icon,
+          visibility: module.visibility,
           permissions: [],
           children: [],
           parentId: module.parent?.id || null,
