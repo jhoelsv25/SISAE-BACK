@@ -46,6 +46,10 @@ export class ErrorHandler extends HttpException {
     throw new ErrorHandler(message, HttpStatus.BAD_REQUEST, context);
   }
 
+  static notFound(message: string, context?: string): never {
+    throw new ErrorHandler(message, HttpStatus.NOT_FOUND, context);
+  }
+
   /**
    * Método estático para errores de conflicto (duplicados)
    */
