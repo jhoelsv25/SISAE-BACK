@@ -12,7 +12,13 @@ interface MenuItem {
   position?: number;
   permissions?: string[];
   children?: MenuItem[];
+  visibility?: Visibility;
   badge?: number;
+}
+
+enum Visibility {
+  PUBLIC = 'public',
+  PRIVATE = 'private',
 }
 
 export async function seedMenuModules(dataSource: DataSource) {
@@ -27,8 +33,17 @@ export async function seedMenuModules(dataSource: DataSource) {
       id: 'dashboard',
       icon: 'fa-chart-line',
       label: 'Dashboard',
-      route: '/dashboard/home',
+      route: '/dashboard',
+      visibility: Visibility.PUBLIC,
       position: 1,
+    },
+    {
+      id: 'profile',
+      icon: 'fa-user',
+      label: 'Perfil',
+      route: '/profile',
+      visibility: Visibility.PRIVATE,
+      position: 99,
     },
 
     // --- Gestión de Usuarios y Roles ---
@@ -37,6 +52,7 @@ export async function seedMenuModules(dataSource: DataSource) {
       icon: 'fa-users-cog',
       label: 'Gestión de Acceso',
       route: '/access',
+      visibility: Visibility.PUBLIC,
       position: 2,
       children: [
         {
@@ -44,6 +60,7 @@ export async function seedMenuModules(dataSource: DataSource) {
           icon: 'fa-user',
           label: 'Usuarios',
           route: '/access/users',
+          visibility: Visibility.PUBLIC,
           position: 1,
           children: [
             {
@@ -51,6 +68,7 @@ export async function seedMenuModules(dataSource: DataSource) {
               icon: 'fa-table',
               label: 'Usuarios',
               route: '/access/users/list',
+              visibility: Visibility.PUBLIC,
               position: 1,
             },
             {
@@ -59,6 +77,7 @@ export async function seedMenuModules(dataSource: DataSource) {
               label: 'Importar',
               route: '/access/users/import',
               position: 2,
+              visibility: Visibility.PUBLIC,
             },
           ],
         },
@@ -71,30 +90,35 @@ export async function seedMenuModules(dataSource: DataSource) {
       icon: 'fa-cog',
       label: 'Configuraciones',
       route: '/settings',
+      visibility: Visibility.PUBLIC,
       position: 3,
       children: [
         {
           id: 'settings-institution',
           icon: 'fa-school',
           label: 'Datos Institucionales',
+          visibility: Visibility.PUBLIC,
           route: '/settings/institution',
         },
         {
           id: 'settings-general',
           icon: 'fa-cogs',
           label: 'General',
+          visibility: Visibility.PUBLIC,
           route: '/settings/general',
         },
         {
           id: 'settings-mail',
           icon: 'fa-envelope',
           label: 'Correo',
+          visibility: Visibility.PUBLIC,
           route: '/settings/mail',
         },
         {
           id: 'settings-notifications',
           icon: 'fa-bell',
           label: 'Notificaciones',
+          visibility: Visibility.PUBLIC,
           route: '/settings/notifications',
         },
       ],
@@ -106,11 +130,13 @@ export async function seedMenuModules(dataSource: DataSource) {
       icon: 'fa-tools',
       label: 'Mantenimiento',
       route: '/maintenance',
+      visibility: Visibility.PUBLIC,
       position: 4,
       children: [
         {
           id: 'admin-backup',
           icon: 'fa-database',
+          visibility: Visibility.PUBLIC,
           label: 'Respaldos',
           route: '/maintenance/backup',
         },
@@ -118,12 +144,14 @@ export async function seedMenuModules(dataSource: DataSource) {
           id: 'settings-backup',
           icon: 'fa-database',
           label: 'Backups Configuración',
+          visibility: Visibility.PUBLIC,
           route: '/maintenance/settings-backup',
         },
         {
           id: 'admin-audit',
           icon: 'fa-clipboard-list',
           label: 'Auditoría',
+          visibility: Visibility.PUBLIC,
           route: '/maintenance/audit',
         },
       ],
@@ -135,12 +163,14 @@ export async function seedMenuModules(dataSource: DataSource) {
       icon: 'fa-key',
       label: 'Gestión de Seguridad',
       route: '/administration',
+      visibility: Visibility.PUBLIC,
       position: 3,
       children: [
         {
           id: 'admin-roles',
           icon: 'fa-user-shield',
           label: 'Roles',
+          visibility: Visibility.PUBLIC,
           route: '/administration/roles',
           position: 1,
         },
@@ -148,6 +178,7 @@ export async function seedMenuModules(dataSource: DataSource) {
           id: 'admin-modules',
           icon: 'fa-puzzle-piece',
           label: 'Módulos',
+          visibility: Visibility.PUBLIC,
           route: '/administration/modules',
           position: 2,
         },
@@ -155,6 +186,7 @@ export async function seedMenuModules(dataSource: DataSource) {
           id: 'permission-list',
           icon: 'fa-lock',
           label: 'Permisos',
+          visibility: Visibility.PUBLIC,
           route: '/administration/permissions',
           position: 3,
         },
@@ -162,6 +194,7 @@ export async function seedMenuModules(dataSource: DataSource) {
           id: 'action-list',
           icon: 'fa-tools', //edit,create,update,delete
           label: 'Acciones',
+          visibility: Visibility.PUBLIC,
           route: '/administration/actions',
           position: 4,
         },
