@@ -5,7 +5,9 @@ import {
   IsBoolean,
   IsDateString,
   IsInt,
+  IsOptional,
   IsString,
+  IsUUID,
   Max,
   Min,
   Validate,
@@ -61,4 +63,16 @@ export class CreateAcademicYearWithPeriodsDto {
   @Type(() => CreatePeriodDto)
   @ArrayMinSize(1)
   periods: CreatePeriodDto[];
+
+  @ApiProperty({
+    example: 'a1b2c3d4-5e6f-7g8h-9i0j-0987654321ab',
+    description: 'ID de la institución asociada',
+    type: 'string',
+    format: 'uuid',
+    required: false,
+  })
+  @IsOptional()
+  @IsString({ message: 'El ID de la institución debe ser una cadena UUID.' })
+  @IsUUID('4', { message: 'El ID de la institución debe ser un UUID válido.' })
+  institution?: string;
 }
