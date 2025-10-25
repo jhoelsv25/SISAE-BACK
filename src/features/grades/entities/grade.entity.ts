@@ -1,30 +1,50 @@
-import { Column, Entity, ManyToOne, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
+import { BaseEntity } from '@common/entities/base.entity';
+import { Column, Entity, ManyToOne, OneToMany } from 'typeorm';
 import { AcademicYearEntity } from '../../academic_years/entities/academic_year.entity';
+import { EnrollmentEntity } from '../../enrollments/entities/enrollment.entity';
+import { PeriodEntity } from '../../periods/entities/period.entity';
+import { SectionCourseEntity } from '../../section-course/entities/section-course.entity';
 import { SectionEntity } from '../../sections/entities/section.entity';
-
-export enum Shift {
-  MORNING = 'morning',
-  AFTERNOON = 'afternoon',
-  NIGHT = 'night',
-}
+import { TeacherEntity } from '../../teachers/entities/teacher.entity';
+import { GradeStatus } from '../enums/grade.enum';
 
 @Entity('grades')
-export class GradeEntity {
-  @PrimaryGeneratedColumn('uuid')
-  id: string;
+export class GradeEntity extends BaseEntity {
+  @Column({ type: 'decimal', precision: 5, scale: 2 })
+  cumulativeGrade: number; // Calificación acumulativa
 
-  @Column({ type: 'varchar', length: 50 })
-  name: string; // Ej: 1° Primaria
+  @Column({ type: 'decimal', precision: 5, scale: 2 })
+  examGrade: number; // Calificación de examen final
 
-  @Column({ type: 'varchar', length: 20, nullable: true, unique: true })
-  code?: string; // Código interno opcional
+  @Column({ type: 'decimal', precision: 5, scale: 2 })
+  finalGrade: number; // Calificación final del curso
 
-  @Column({ type: 'enum', enum: Shift, default: Shift.MORNING })
-  shift: Shift; // Turno
+  @Column({ type: 'int', default: 0 })
+  tardies: number; // Número de tardanzas permitidas
 
-  // Relación con Año Académico
+  @Column({ type: 'int', default: 0 })
+  absences: number; // Número de ausencias permitidas
+
+  @Column({ type: 'text', nullable: true })
+  observations?: string;
+
+  @Column({ type: 'varchar', length: 100 })
+  modifiedBy: string;
+
+  @Column({ type: 'enum', enum: GradeStatus, default: GradeStatus.ACTIVE })
+  status: GradeStatus;
+
+  @ManyToOne(() => EnrollmentEntity)
+  enrollment: EnrollmentEntity;
+
+  @ManyToOne(() => SectionCourseEntity)
+  sectionCourse: SectionCourseEntity;
+
+  @ManyToOne(() => PeriodEntity)
+  period: PeriodEntity;
+
   @ManyToOne(() => AcademicYearEntity)
-  academicYear: AcademicYearEntity;
+  teacher: TeacherEntity;
 
   // Relación con Secciones
   @OneToMany(() => SectionEntity, section => section.grade, { cascade: true })
