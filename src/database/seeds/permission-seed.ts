@@ -22,9 +22,9 @@ export async function seedAdminPermissions(dataSource: DataSource) {
       email: 'admin@sisae.com',
       username: 'admin',
       password: hashedPassword,
-      firstName: 'Admin',
-      lastName: 'Principal',
       isActive: true,
+      // Puedes agregar status si es requerido por el entity
+      // status: UserStatus.ACTIVE,
     });
     await userRepository.save(user);
     console.log('✅ Usuario admin@sisae.com creado');
