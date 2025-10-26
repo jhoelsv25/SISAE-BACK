@@ -12,57 +12,63 @@ export class CreateInstitutionDto {
   @IsNotEmpty({ message: 'El código modular es obligatorio.' })
   modularCode: string;
 
-  @ApiProperty({ example: 'Pública', description: 'Tipo de gestión' })
+  @ApiProperty({ example: 'Pública', description: 'Tipo de gestión', required: false })
+  @IsOptional()
   @IsString({ message: 'El tipo de gestión debe ser una cadena de texto.' })
-  @IsNotEmpty({ message: 'El tipo de gestión es obligatorio.' })
-  managementType: string;
+  managementType?: string;
 
-  @ApiProperty({ example: 'UGEL Lima', description: 'UGEL de la institución' })
+  @ApiProperty({ example: 'UGEL Lima', description: 'UGEL de la institución', required: false })
+  @IsOptional()
   @IsString({ message: 'La UGEL debe ser una cadena de texto.' })
-  @IsNotEmpty({ message: 'La UGEL es obligatoria.' })
-  ugel: string;
+  ugel?: string;
 
-  @ApiProperty({ example: 'DRE Lima', description: 'DRE de la institución' })
+  @ApiProperty({ example: 'DRE Lima', description: 'DRE de la institución', required: false })
+  @IsOptional()
   @IsString({ message: 'La DRE debe ser una cadena de texto.' })
-  @IsNotEmpty({ message: 'La DRE es obligatoria.' })
-  dre: string;
+  dre?: string;
 
-  @ApiProperty({ example: 'Juan Pérez', description: 'Nombre del director' })
+  @ApiProperty({ example: 'Juan Pérez', description: 'Nombre del director', required: false })
+  @IsOptional()
   @IsString({ message: 'El nombre del director debe ser una cadena de texto.' })
-  @IsNotEmpty({ message: 'El nombre del director es obligatorio.' })
-  principal: string;
+  principal?: string;
 
   @ApiProperty({ example: 'Av. Principal 123', description: 'Dirección de la institución' })
   @IsString({ message: 'La dirección debe ser una cadena de texto.' })
   @IsNotEmpty({ message: 'La dirección es obligatoria.' })
   address: string;
 
-  @ApiProperty({ example: 'Miraflores', description: 'Distrito de la institución' })
+  @ApiProperty({
+    example: 'Miraflores',
+    description: 'Distrito de la institución',
+    required: false,
+  })
+  @IsOptional()
   @IsString({ message: 'El distrito debe ser una cadena de texto.' })
-  @IsNotEmpty({ message: 'El distrito es obligatorio.' })
-  district: string;
+  district?: string;
 
-  @ApiProperty({ example: 'Lima', description: 'Provincia de la institución' })
+  @ApiProperty({ example: 'Lima', description: 'Provincia de la institución', required: false })
+  @IsOptional()
   @IsString({ message: 'La provincia debe ser una cadena de texto.' })
-  @IsNotEmpty({ message: 'La provincia es obligatoria.' })
-  province: string;
+  province?: string;
 
-  @ApiProperty({ example: 'Lima', description: 'Departamento de la institución' })
+  @ApiProperty({ example: 'Lima', description: 'Departamento de la institución', required: false })
+  @IsOptional()
   @IsString({ message: 'El departamento debe ser una cadena de texto.' })
-  @IsNotEmpty({ message: 'El departamento es obligatorio.' })
-  department: string;
+  department?: string;
 
-  @ApiProperty({ example: '555-1234', description: 'Teléfono de la institución' })
+  @ApiProperty({ example: '555-1234', description: 'Teléfono de la institución', required: false })
+  @IsOptional()
   @IsString({ message: 'El teléfono debe ser una cadena de texto.' })
-  @IsNotEmpty({ message: 'El teléfono es obligatorio.' })
-  phone: string;
+  phone?: string;
 
   @ApiProperty({
     example: 'colegio@ejemplo.com',
     description: 'Correo electrónico de la institución',
+    required: false,
   })
+  @IsOptional()
   @IsEmail({}, { message: 'El correo electrónico debe ser válido.' })
-  email: string;
+  email?: string;
 
   @ApiProperty({ example: 'activo', description: 'Estado de la institución' })
   @IsString({ message: 'El estado debe ser una cadena de texto.' })

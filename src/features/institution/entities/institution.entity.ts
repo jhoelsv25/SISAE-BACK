@@ -9,42 +9,42 @@ export class InstitutionEntity extends BaseEntity {
   @Column({ type: 'varchar', length: 50, unique: true })
   modularCode: string;
 
-  @Column({ type: 'varchar', length: 50 })
-  managementType: string;
+  @Column({ type: 'varchar', length: 50, nullable: true })
+  managementType?: string;
 
-  @Column({ type: 'varchar', length: 50 })
-  ugel: string;
+  @Column({ type: 'varchar', length: 50, nullable: true })
+  ugel?: string;
 
-  @Column({ type: 'varchar', length: 50 })
-  dre: string;
+  @Column({ type: 'varchar', length: 50, nullable: true })
+  dre?: string;
 
-  @Column({ type: 'varchar', length: 50 })
-  principal: string;
+  @Column({ type: 'varchar', length: 50, nullable: true })
+  principal?: string;
 
   @Column({ type: 'varchar', length: 100 })
   address: string;
 
-  @Column({ type: 'varchar', length: 50 })
-  district: string;
+  @Column({ type: 'varchar', length: 50, nullable: true })
+  district?: string;
 
-  @Column({ type: 'varchar', length: 50 })
-  province: string;
+  @Column({ type: 'varchar', length: 50, nullable: true })
+  province?: string;
 
-  @Column({ type: 'varchar', length: 50 })
-  department: string;
+  @Column({ type: 'varchar', length: 50, nullable: true })
+  department?: string;
 
-  @Column({ type: 'varchar', length: 50 })
-  phone: string;
+  @Column({ type: 'varchar', length: 50, nullable: true })
+  phone?: string;
 
-  @Column({ type: 'varchar', length: 100 })
-  email: string;
+  @Column({ type: 'varchar', length: 100, nullable: true })
+  email?: string;
 
   @Column({ type: 'varchar', length: 20 })
   status: string;
 
-  @Column({ type: 'varchar', length: 255 })
-  logoUrl: string;
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  logoUrl?: string;
 
-  @Column({ type: 'text' })
-  description: string;
+  @Column({ type: 'text', nullable: true })
+  description?: string;
 }

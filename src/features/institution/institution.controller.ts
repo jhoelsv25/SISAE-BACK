@@ -1,15 +1,15 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
-import { InstitutionService } from './institution.service';
+import { Body, Controller, Delete, Get, Param, Patch, Post } from '@nestjs/common';
 import { CreateInstitutionDto } from './dto/create-institution.dto';
 import { UpdateInstitutionDto } from './dto/update-institution.dto';
+import { InstitutionService } from './institution.service';
 
 @Controller('institution')
 export class InstitutionController {
   constructor(private readonly institutionService: InstitutionService) {}
 
   @Post()
-  create(@Body() createInstitutionDto: CreateInstitutionDto) {
-    return this.institutionService.create(createInstitutionDto);
+  create(@Body() dto: CreateInstitutionDto) {
+    return this.institutionService.create(dto);
   }
 
   @Get()
@@ -19,16 +19,16 @@ export class InstitutionController {
 
   @Get(':id')
   findOne(@Param('id') id: string) {
-    return this.institutionService.findOne(+id);
+    return this.institutionService.findOne(id);
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateInstitutionDto: UpdateInstitutionDto) {
-    return this.institutionService.update(+id, updateInstitutionDto);
+  update(@Param('id') id: string, @Body() dto: UpdateInstitutionDto) {
+    return this.institutionService.update(id, dto);
   }
 
   @Delete(':id')
   remove(@Param('id') id: string) {
-    return this.institutionService.remove(+id);
+    return this.institutionService.remove(id);
   }
 }
