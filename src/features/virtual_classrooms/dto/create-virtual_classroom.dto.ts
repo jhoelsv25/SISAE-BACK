@@ -19,13 +19,23 @@ export class CreateVirtualClassroomDto {
   @IsString({ message: 'La URL de acceso debe ser una cadena de texto.' })
   accessUrl: string;
 
-  @ApiProperty({ example: '123456', description: 'Código de acceso a la aula virtual.' })
+  @ApiProperty({
+    example: '123456',
+    description: 'Código de acceso a la aula virtual.',
+    required: false,
+  })
+  @IsOptional()
   @IsString({ message: 'El código de acceso debe ser una cadena de texto.' })
-  accessCode: string;
+  accessCode?: string;
 
-  @ApiProperty({ example: 'abc123', description: 'Contraseña de acceso a la aula virtual.' })
+  @ApiProperty({
+    example: 'abc123',
+    description: 'Contraseña de acceso a la aula virtual.',
+    required: false,
+  })
+  @IsOptional()
   @IsString({ message: 'La contraseña de acceso debe ser una cadena de texto.' })
-  accessPassword: string;
+  accessPassword?: string;
 
   @ApiProperty({
     example: 'CLASE',
@@ -35,9 +45,10 @@ export class CreateVirtualClassroomDto {
   @IsEnum(VirtualClassroomType, { message: 'El tipo de aula virtual debe ser válido.' })
   type: VirtualClassroomType;
 
-  @ApiProperty({ example: '987654321', description: 'ID de la reunión.' })
+  @ApiProperty({ example: '987654321', description: 'ID de la reunión.', required: false })
+  @IsOptional()
   @IsString({ message: 'El ID de la reunión debe ser una cadena de texto.' })
-  meetingId: string;
+  meetingId?: string;
 
   @ApiProperty({
     example: { waitingRoom: true },

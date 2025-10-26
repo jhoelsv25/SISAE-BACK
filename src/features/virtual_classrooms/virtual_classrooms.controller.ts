@@ -1,34 +1,35 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
-import { VirtualClassroomsService } from './virtual_classrooms.service';
+import { FilterBaseDto } from '@common/dtos/filter-base.dto';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common';
 import { CreateVirtualClassroomDto } from './dto/create-virtual_classroom.dto';
 import { UpdateVirtualClassroomDto } from './dto/update-virtual_classroom.dto';
+import { VirtualClassroomsService } from './virtual_classrooms.service';
 
 @Controller('virtual-classrooms')
 export class VirtualClassroomsController {
   constructor(private readonly virtualClassroomsService: VirtualClassroomsService) {}
 
   @Post()
-  create(@Body() createVirtualClassroomDto: CreateVirtualClassroomDto) {
-    return this.virtualClassroomsService.create(createVirtualClassroomDto);
+  async create(@Body() dto: CreateVirtualClassroomDto) {
+    return this.virtualClassroomsService.create(dto);
   }
 
   @Get()
-  findAll() {
-    return this.virtualClassroomsService.findAll();
+  async findAll(@Query() filters: FilterBaseDto) {
+    return this.virtualClassroomsService.findAll(filters);
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.virtualClassroomsService.findOne(+id);
+  async findOne(@Param('id') id: string) {
+    return this.virtualClassroomsService.findOne(id);
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateVirtualClassroomDto: UpdateVirtualClassroomDto) {
-    return this.virtualClassroomsService.update(+id, updateVirtualClassroomDto);
+  async update(@Param('id') id: string, @Body() dto: UpdateVirtualClassroomDto) {
+    return this.virtualClassroomsService.update(id, dto);
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.virtualClassroomsService.remove(+id);
+  async remove(@Param('id') id: string) {
+    return this.virtualClassroomsService.remove(id);
   }
 }

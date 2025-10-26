@@ -15,18 +15,20 @@ export class VirtualClassroomEntity extends BaseEntity {
   @Column({ type: 'text' })
   accessUrl: string;
 
-  @Column({ type: 'text' })
-  accessCode: string;
-  @Column({ type: 'text' })
-  accessPassword: string;
+  @Column({ type: 'text', nullable: true })
+  accessCode?: string;
+
+  @Column({ type: 'text', nullable: true })
+  accessPassword?: string;
 
   @Column({ type: 'enum', enum: VirtualClassroomType })
   type: VirtualClassroomType;
-  @Column({ type: 'text' })
-  meetingId: string;
+
+  @Column({ type: 'text', nullable: true })
+  meetingId?: string;
 
   @Column({ type: 'jsonb', nullable: true })
-  settings: any;
+  settings?: any;
 
   @Column({ type: 'enum', enum: StatusType, default: StatusType.ACTIVE })
   status: StatusType;
