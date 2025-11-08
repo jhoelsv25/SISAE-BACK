@@ -24,10 +24,8 @@ export class AcademicYearService {
       if (existing) throw new BadRequestException(`El año académico ${dto.year} ya existe`);
 
       const yearEntity = manager.getRepository(AcademicYearEntity).create({
-        year: dto.year,
-        startDate: dto.startDate,
-        endDate: dto.endDate,
-        isActive: dto.isActive,
+        ...dto,
+        institution: dto.institution ? { id: dto.institution } : undefined,
       });
       const savedYear = await manager.getRepository(AcademicYearEntity).save(yearEntity);
 
@@ -41,7 +39,7 @@ export class AcademicYearService {
       const periodEntities = dto.periods.map(p =>
         manager.getRepository(PeriodEntity).create({
           ...p,
-          academicYearId: savedYear.id,
+          academicYear: savedYear,
         }),
       );
 
@@ -57,7 +55,10 @@ export class AcademicYearService {
       if (yearExists) {
         return ErrorHandler.conflict(`El año académico ${dto.year} ya existe`, 'AcademicYear');
       }
-      const entity = this.repo.create(dto);
+      const entity = this.repo.create({
+        ...dto,
+        institution: dto.institution ? { id: dto.institution } : undefined,
+      });
       return await this.repo.save(entity);
     } catch (error) {
       return ErrorHandler.handleUnknownError(error, 'Error al crear año académico');

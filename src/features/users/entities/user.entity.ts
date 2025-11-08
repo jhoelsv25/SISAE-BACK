@@ -1,7 +1,13 @@
+import { BaseEntity } from '@common/entities/base.entity';
 import { Column, Entity, Index, ManyToOne, OneToOne } from 'typeorm';
-import { BaseEntity } from '../../../common/entities/base.entity';
-import { ProfileEntity } from '../../profile/entities/profile.entity';
+import { PersonEntity } from '../../persons/entities/person.entity';
 import { RoleEntity } from '../../roles/entities/role.entity';
+
+export enum UserStatus {
+  ACTIVE = 'ACTIVE',
+  INACTIVE = 'INACTIVE',
+  SUSPENDED = 'SUSPENDED',
+}
 
 @Index('idx_user_username', ['username'])
 @Index('idx_user_email', ['email'])
@@ -14,20 +20,6 @@ export class UserEntity extends BaseEntity {
     nullable: false,
   })
   username: string;
-
-  @Column({
-    type: 'varchar',
-    length: 100,
-    nullable: true,
-  })
-  firstName: string;
-
-  @Column({
-    type: 'varchar',
-    length: 100,
-    nullable: true,
-  })
-  lastName: string;
 
   @Column({
     type: 'varchar',
@@ -58,17 +50,23 @@ export class UserEntity extends BaseEntity {
   lastLogin?: Date;
 
   @Column({
-    type: 'varchar',
-    length: 255,
-    nullable: true,
+    type: 'int',
+    default: 0,
   })
-  profilePicture?: string;
+  failedLoginAttempts: number;
 
-  @OneToOne(() => ProfileEntity, profile => profile.user, {
+  @Column({
+    type: 'enum',
+    enum: UserStatus,
+    default: UserStatus.ACTIVE,
+  })
+  status: UserStatus;
+
+  @OneToOne(() => PersonEntity, person => person.user, {
     nullable: true,
     cascade: true,
   })
-  profile?: ProfileEntity;
+  person?: PersonEntity;
 
   @ManyToOne(() => RoleEntity, role => role.users, {
     eager: true,

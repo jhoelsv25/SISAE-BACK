@@ -12,4 +12,4 @@ fi
 MIGRATION_NAME=$1
 
 echo "Creando migración: $MIGRATION_NAME"
-npx typeorm-ts-node-commonjs -d src/database/data-source.ts migration:create "src/database/migrations/$MIGRATION_NAME"
+npx ts-node -r tsconfig-paths/register ./node_modules/typeorm/cli.js migration:create "src/database/migrations/$MIGRATION_NAME" -d src/database/data-source.ts

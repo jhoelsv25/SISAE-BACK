@@ -23,7 +23,8 @@ export class UserWriteRepository {
 
       const user = this.repo.create({
         ...dto,
-        role: dto.roleId ? { id: dto.roleId } : undefined,
+        role: dto.role ? { id: dto.role } : undefined,
+        person: dto.person ? { id: dto.person } : undefined,
       });
 
       return await this.repo.save(user);
@@ -40,9 +41,13 @@ export class UserWriteRepository {
       // Actualizar solo los campos que vienen en el DTO
       Object.assign(currentUser, dtoWithoutPassword);
 
-      // Si viene roleId, actualizar la relación
-      if (dto.roleId) {
-        currentUser.role = { id: dto.roleId } as any;
+      // Si viene role, actualizar la relación
+      if (dto.role) {
+        currentUser.role = { id: dto.role } as any;
+      }
+      // Si viene person, actualizar la relación
+      if (dto.person) {
+        currentUser.person = { id: dto.person } as any;
       }
 
       return await this.repo.save(currentUser);

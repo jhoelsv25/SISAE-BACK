@@ -3,6 +3,7 @@ import { Transform } from 'class-transformer';
 import {
   IsBoolean,
   IsEmail,
+  IsEnum,
   IsOptional,
   IsString,
   IsUUID,
@@ -10,6 +11,7 @@ import {
   MaxLength,
   MinLength,
 } from 'class-validator';
+import { UserStatus } from '../entities/user.entity';
 
 @ApiTags('users')
 export class CreateUserDto {
@@ -62,43 +64,34 @@ export class CreateUserDto {
   isActive?: boolean;
 
   @ApiProperty({
-    description: 'URL de la imagen de perfil del usuario',
-    example: 'https://example.com/avatar.jpg',
+    description: 'Estado del usuario',
+    example: 'ACTIVE',
+    enum: UserStatus,
+    default: UserStatus.ACTIVE,
+  })
+  @IsEnum(UserStatus, { message: 'El estado debe ser válido.' })
+  @IsOptional()
+  status?: UserStatus;
+
+  @ApiProperty({
+    description: 'ID de la persona asociada al usuario',
+    example: 'f47ac10b-58cc-4372-a567-0e02b2c3d479',
     required: false,
-    maxLength: 255,
+    type: 'string',
+    format: 'uuid',
   })
   @IsOptional()
-  @IsString({ message: 'La imagen de perfil debe ser una cadena de texto' })
-  @MaxLength(255, { message: 'La URL de la imagen no puede tener más de 255 caracteres' })
-  profilePicture?: string;
+  @IsUUID(4, { message: 'El ID de la persona debe ser un UUID válido' })
+  person?: string;
 
   @ApiProperty({
     description: 'ID del rol asignado al usuario',
     example: 'f47ac10b-58cc-4372-a567-0e02b2c3d479',
+    required: false,
+    type: 'string',
+    format: 'uuid',
   })
   @IsOptional()
   @IsUUID(4, { message: 'El ID del rol debe ser un UUID válido' })
-  roleId?: string;
-
-  @ApiProperty({
-    description: 'Nombre(s) del usuario',
-    example: 'Juan Carlos',
-    minLength: 2,
-    maxLength: 100,
-  })
-  @IsString({ message: 'El nombre debe ser una cadena de texto' })
-  @MinLength(2, { message: 'El nombre debe tener al menos 2 caracteres' })
-  @MaxLength(100, { message: 'El nombre no puede tener más de 100 caracteres' })
-  firstName: string;
-
-  @ApiProperty({
-    description: 'Apellido(s) del usuario',
-    example: 'Pérez Gómez',
-    minLength: 2,
-    maxLength: 100,
-  })
-  @IsString({ message: 'El apellido debe ser una cadena de texto' })
-  @MinLength(2, { message: 'El apellido debe tener al menos 2 caracteres' })
-  @MaxLength(100, { message: 'El apellido no puede tener más de 100 caracteres' })
-  lastName: string;
+  role?: string;
 }

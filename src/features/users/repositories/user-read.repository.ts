@@ -15,7 +15,7 @@ export class UserReadRepository {
     try {
       const user = await this.repo.findOne({
         where: { id },
-        relations: ['role', 'role.permissions', 'role.permissions.module', 'profile'],
+        relations: ['role', 'role.permissions', 'role.permissions.module', 'person'],
       });
       if (!user) throw new NotFoundException('Usuario no encontrado');
       return user;
@@ -28,18 +28,8 @@ export class UserReadRepository {
     try {
       return await this.repo.findOne({
         where: { username },
-        relations: ['role'],
-        select: [
-          'id',
-          'username',
-          'email',
-          'password',
-          'isActive',
-          'lastLogin',
-          'firstName',
-          'lastName',
-          'profilePicture',
-        ],
+        relations: ['role', 'person'],
+        select: ['id', 'username', 'email', 'password', 'isActive', 'lastLogin', 'status'],
       });
     } catch (error) {
       throw new ErrorHandler(error.message, error.status || 500);
@@ -50,7 +40,7 @@ export class UserReadRepository {
     try {
       return await this.repo.findOne({
         where: { email },
-        relations: ['role'],
+        relations: ['role', 'person'],
       });
     } catch (error) {
       throw new ErrorHandler(error.message, error.status || 500);
@@ -64,7 +54,7 @@ export class UserReadRepository {
       const query = this.repo
         .createQueryBuilder('user')
         .leftJoinAndSelect('user.role', 'role')
-        .leftJoinAndSelect('user.profile', 'profile')
+        .leftJoinAndSelect('user.person', 'person')
         .orderBy('user.createdAt', 'DESC');
 
       if (typeof isActive === 'boolean') {
@@ -97,7 +87,7 @@ export class UserReadRepository {
     try {
       return await this.repo.find({
         where: { isActive: true },
-        relations: ['role', 'profile'],
+        relations: ['role', 'person'],
       });
     } catch (error) {
       throw new ErrorHandler(error.message, error.status || 500);
