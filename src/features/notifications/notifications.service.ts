@@ -1,26 +1,74 @@
 import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { ErrorHandler } from '../../common/exceptions';
 import { CreateNotificationDto } from './dto/create-notification.dto';
+import { FilterNotificationDto } from './dto/filter-notification.dto';
 import { UpdateNotificationDto } from './dto/update-notification.dto';
+import { NotificationEntity } from './entities/notification.entity';
 
 @Injectable()
 export class NotificationsService {
-  create(createNotificationDto: CreateNotificationDto) {
-    return 'This action adds a new notification';
+  constructor(
+    @InjectRepository(NotificationEntity)
+    private readonly repo: Repository<NotificationEntity>,
+  ) {}
+
+  async create(dto: CreateNotificationDto) {
+    try {
+      const notification = this.repo.create(dto);
+      await this.repo.save(notification);
+      return { message: 'Notificación creada correctamente', data: notification };
+    } catch (error) {
+      throw new ErrorHandler('Ocurrió un error al crear la notificación', 500);
+    }
   }
 
-  findAll() {
-    return `This action returns all notifications`;
+  async findAll(filter: FilterNotificationDto) {
+    try {
+      const notifications = await this.repo.find({ where: filter });
+      return { message: 'Notificaciones encontradas correctamente', data: notifications };
+    } catch (error) {
+      throw new ErrorHandler('Ocurrió un error al obtener las notificaciones', 500);
+    }
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} notification`;
+  async findOne(id: string) {
+    try {
+      const notification = await this.repo.findOne({ where: { id } });
+      if (!notification) {
+        throw new ErrorHandler('Notificación no encontrada', 404);
+      }
+      return { message: 'Notificación encontrada correctamente', data: notification };
+    } catch (error) {
+      throw new ErrorHandler('Ocurrió un error al obtener la notificación', 500);
+    }
   }
 
-  update(id: number, updateNotificationDto: UpdateNotificationDto) {
-    return `This action updates a #${id} notification`;
+  async update(id: string, updateNotificationDto: UpdateNotificationDto) {
+    try {
+      const notification = await this.repo.findOne({ where: { id } });
+      if (!notification) {
+        throw new ErrorHandler('Notificación no encontrada', 404);
+      }
+      this.repo.merge(notification, updateNotificationDto);
+      await this.repo.save(notification);
+      return { message: 'Notificación actualizada correctamente', data: notification };
+    } catch (error) {
+      throw new ErrorHandler('Ocurrió un error al actualizar la notificación', 500);
+    }
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} notification`;
+  async remove(id: string) {
+    try {
+      const notification = await this.repo.findOne({ where: { id } });
+      if (!notification) {
+        throw new ErrorHandler('Notificación no encontrada', 404);
+      }
+      await this.repo.remove(notification);
+      return { message: 'Notificación eliminada correctamente', data: notification };
+    } catch (error) {
+      throw new ErrorHandler('Ocurrió un error al eliminar la notificación', 500);
+    }
   }
 }
