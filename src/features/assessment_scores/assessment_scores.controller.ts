@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common';
 import { AssessmentScoresService } from './assessment_scores.service';
 import { CreateAssessmentScoreDto } from './dto/create-assessment_score.dto';
 import { UpdateAssessmentScoreDto } from './dto/update-assessment_score.dto';
@@ -8,27 +8,27 @@ export class AssessmentScoresController {
   constructor(private readonly assessmentScoresService: AssessmentScoresService) {}
 
   @Post()
-  create(@Body() createAssessmentScoreDto: CreateAssessmentScoreDto) {
-    return this.assessmentScoresService.create(createAssessmentScoreDto);
+  create(@Body() dto: CreateAssessmentScoreDto) {
+    return this.assessmentScoresService.create(dto);
   }
 
   @Get()
-  findAll() {
-    return this.assessmentScoresService.findAll();
+  findAll(@Query() query: any) {
+    return this.assessmentScoresService.findAll(query);
   }
 
   @Get(':id')
   findOne(@Param('id') id: string) {
-    return this.assessmentScoresService.findOne(+id);
+    return this.assessmentScoresService.findOne(id);
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateAssessmentScoreDto: UpdateAssessmentScoreDto) {
-    return this.assessmentScoresService.update(+id, updateAssessmentScoreDto);
+  update(@Param('id') id: string, @Body() dto: UpdateAssessmentScoreDto) {
+    return this.assessmentScoresService.update(id, dto);
   }
 
   @Delete(':id')
   remove(@Param('id') id: string) {
-    return this.assessmentScoresService.remove(+id);
+    return this.assessmentScoresService.remove(id);
   }
 }
