@@ -1,34 +1,34 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
-import { ForumThreadsService } from './forum_threads.service';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common';
 import { CreateForumThreadDto } from './dto/create-forum_thread.dto';
 import { UpdateForumThreadDto } from './dto/update-forum_thread.dto';
+import { ForumThreadsService } from './forum_threads.service';
 
 @Controller('forum-threads')
 export class ForumThreadsController {
   constructor(private readonly forumThreadsService: ForumThreadsService) {}
 
   @Post()
-  create(@Body() createForumThreadDto: CreateForumThreadDto) {
-    return this.forumThreadsService.create(createForumThreadDto);
+  async create(@Body() dto: CreateForumThreadDto) {
+    return this.forumThreadsService.create(dto);
   }
 
   @Get()
-  findAll() {
-    return this.forumThreadsService.findAll();
+  findAll(@Query() query: any) {
+    return this.forumThreadsService.findAll(query);
   }
 
   @Get(':id')
   findOne(@Param('id') id: string) {
-    return this.forumThreadsService.findOne(+id);
+    return this.forumThreadsService.findOne(id);
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateForumThreadDto: UpdateForumThreadDto) {
-    return this.forumThreadsService.update(+id, updateForumThreadDto);
+  update(@Param('id') id: string, @Body() dto: UpdateForumThreadDto) {
+    return this.forumThreadsService.update(id, dto);
   }
 
   @Delete(':id')
   remove(@Param('id') id: string) {
-    return this.forumThreadsService.remove(+id);
+    return this.forumThreadsService.remove(id);
   }
 }
