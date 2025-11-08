@@ -1,34 +1,34 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
-import { GuardiansService } from './guardians.service';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common';
 import { CreateGuardianDto } from './dto/create-guardian.dto';
 import { UpdateGuardianDto } from './dto/update-guardian.dto';
+import { GuardiansService } from './guardians.service';
 
 @Controller('guardians')
 export class GuardiansController {
   constructor(private readonly guardiansService: GuardiansService) {}
 
   @Post()
-  create(@Body() createGuardianDto: CreateGuardianDto) {
-    return this.guardiansService.create(createGuardianDto);
+  create(@Body() dto: CreateGuardianDto) {
+    return this.guardiansService.create(dto);
   }
 
   @Get()
-  findAll() {
-    return this.guardiansService.findAll();
+  findAll(@Query() filter: any) {
+    return this.guardiansService.findAll(filter);
   }
 
   @Get(':id')
   findOne(@Param('id') id: string) {
-    return this.guardiansService.findOne(+id);
+    return this.guardiansService.findOne(id);
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateGuardianDto: UpdateGuardianDto) {
-    return this.guardiansService.update(+id, updateGuardianDto);
+  update(@Param('id') id: string, @Body() dto: UpdateGuardianDto) {
+    return this.guardiansService.update(id, dto);
   }
 
   @Delete(':id')
   remove(@Param('id') id: string) {
-    return this.guardiansService.remove(+id);
+    return this.guardiansService.remove(id);
   }
 }

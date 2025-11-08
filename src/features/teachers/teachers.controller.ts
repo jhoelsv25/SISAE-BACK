@@ -9,8 +9,8 @@ export class TeachersController {
   constructor(private readonly teachersService: TeachersService) {}
 
   @Post()
-  create(@Body() createTeacherDto: CreateTeacherDto) {
-    return this.teachersService.create(createTeacherDto);
+  create(@Body() dto: CreateTeacherDto) {
+    return this.teachersService.create(dto);
   }
 
   @Get()
@@ -24,8 +24,8 @@ export class TeachersController {
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateTeacherDto: UpdateTeacherDto) {
-    return this.teachersService.update(id, updateTeacherDto);
+  update(@Param('id') id: string, @Body() dto: UpdateTeacherDto) {
+    return this.teachersService.update(id, dto);
   }
 
   @Delete(':id')
