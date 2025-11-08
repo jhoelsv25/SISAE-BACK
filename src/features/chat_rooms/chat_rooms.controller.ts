@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common';
 import { ChatRoomsService } from './chat_rooms.service';
 import { CreateChatRoomDto } from './dto/create-chat_room.dto';
 import { UpdateChatRoomDto } from './dto/update-chat_room.dto';
@@ -8,27 +8,27 @@ export class ChatRoomsController {
   constructor(private readonly chatRoomsService: ChatRoomsService) {}
 
   @Post()
-  create(@Body() createChatRoomDto: CreateChatRoomDto) {
-    return this.chatRoomsService.create(createChatRoomDto);
+  create(@Body() dto: CreateChatRoomDto) {
+    return this.chatRoomsService.create(dto);
   }
 
   @Get()
-  findAll() {
-    return this.chatRoomsService.findAll();
+  findAll(@Query() query: any) {
+    return this.chatRoomsService.findAll(query);
   }
 
   @Get(':id')
   findOne(@Param('id') id: string) {
-    return this.chatRoomsService.findOne(+id);
+    return this.chatRoomsService.findOne(id);
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateChatRoomDto: UpdateChatRoomDto) {
-    return this.chatRoomsService.update(+id, updateChatRoomDto);
+  update(@Param('id') id: string, @Body() dto: UpdateChatRoomDto) {
+    return this.chatRoomsService.update(id, dto);
   }
 
   @Delete(':id')
   remove(@Param('id') id: string) {
-    return this.chatRoomsService.remove(+id);
+    return this.chatRoomsService.remove(id);
   }
 }
