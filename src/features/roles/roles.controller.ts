@@ -1,4 +1,14 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { AutoPermission } from '../../auth/decorators/auto-permission.decorator';
 import { AdminRoles, OnlySuperAdmin } from '../../auth/decorators/common-roles.decorator';
@@ -6,6 +16,7 @@ import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../../auth/guards/permissions.guard';
 import { RolesGuard } from '../../auth/guards/roles.guard';
 import { CreateRoleDto } from './dto/create-role.dto';
+import { FilterRoleDto } from './dto/filte-role.dto';
 import { UpdateRoleDto } from './dto/update-role.dto';
 import { RoleService } from './services/role.service';
 
@@ -31,8 +42,8 @@ export class RolesController {
   //modulos y permisos asociados al rol
   @Get(':id/modules')
   @AutoPermission('read')
-  findModules(@Param('id') id: string) {
-    return this.roleService.getModulesAndPermissionsByRoleId(id);
+  async findModules(@Param('id') id: string, @Query() filter: FilterRoleDto) {
+    return this.roleService.getModuleByRoleIdPaginated(id, filter);
   }
 
   @Get(':id')

@@ -45,4 +45,8 @@ export class RoleService {
   async getModulesAndPermissionsByRoleId(id: string) {
     return await this.getModulesAndPermissionsByRoleIdUseCase.execute(id);
   }
+
+  async getModuleByRoleIdPaginated(id: string, filter: FilterRoleDto) {
+    return await this.getModulesAndPermissionsByRoleIdUseCase.executePaginated(id, filter);
+  }
 }
