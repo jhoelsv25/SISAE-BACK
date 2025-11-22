@@ -2,19 +2,22 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ErrorHandler } from '../../common/exceptions';
-import { LearningMaterialEntity } from '../learning_materials/entities/learning_material.entity';
 import { CreateLearningModuleDto } from './dto/create-learning_module.dto';
 import { UpdateLearningModuleDto } from './dto/update-learning_module.dto';
+import { LearningModuleEntity } from './entities/learning_module.entity';
 
 @Injectable()
 export class LearningModulesService {
   constructor(
-    @InjectRepository(LearningMaterialEntity)
-    private readonly repo: Repository<LearningMaterialEntity>,
+    @InjectRepository(LearningModuleEntity)
+    private readonly repo: Repository<LearningModuleEntity>,
   ) {}
   async create(dto: CreateLearningModuleDto) {
     try {
-      const learningModule = this.repo.create({ ...dto });
+      const learningModule = this.repo.create({
+        ...dto,
+        sectionCourse: { id: dto.sectionCourseId },
+      });
       const data = await this.repo.save(learningModule);
       return { message: 'Módulo de aprendizaje creado correctamente', data };
     } catch (error) {

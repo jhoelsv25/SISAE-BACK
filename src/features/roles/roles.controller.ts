@@ -28,6 +28,13 @@ export class RolesController {
     return this.roleService.getAll();
   }
 
+  //modulos y permisos asociados al rol
+  @Get(':id/modules')
+  @AutoPermission('read')
+  findModules(@Param('id') id: string) {
+    return this.roleService.getModulesAndPermissionsByRoleId(id);
+  }
+
   @Get(':id')
   @AutoPermission('read')
   findOne(@Param('id') id: string) {

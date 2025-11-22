@@ -1,5 +1,5 @@
 import { BaseEntity } from '@common/entities/base.entity';
-import { Column, Entity, Index, ManyToOne, OneToOne } from 'typeorm';
+import { Column, Entity, Index, JoinColumn, ManyToOne, OneToOne } from 'typeorm';
 import { PersonEntity } from '../../persons/entities/person.entity';
 import { RoleEntity } from '../../roles/entities/role.entity';
 
@@ -66,6 +66,7 @@ export class UserEntity extends BaseEntity {
     nullable: true,
     cascade: true,
   })
+  @JoinColumn()
   person?: PersonEntity;
 
   @ManyToOne(() => RoleEntity, role => role.users, {

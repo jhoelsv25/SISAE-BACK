@@ -22,5 +22,5 @@ export class LearningModuleEntity extends BaseEntity {
   isPublished: boolean;
 
   @ManyToOne(() => SectionCourseEntity)
-  sectionCourseId: SectionCourseEntity;
+  sectionCourse: SectionCourseEntity;
 }
