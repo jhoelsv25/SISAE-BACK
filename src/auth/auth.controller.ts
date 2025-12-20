@@ -21,7 +21,15 @@ export class AuthController {
     await this.authCookieService.setAuthCookies(res, accessToken, refreshToken);
 
     // NestJS manejará automáticamente la serialización
-    return { message: result.message, user, accessToken, modules };
+    console.log('✅ [AuthController] Usuario autenticado:', user.email);
+    const response = {
+      message: result.message,
+      user,
+      accessToken,
+      modules,
+    };
+    console.log('Response:', response);
+    return response;
   }
 
   @Post('refresh-token')
