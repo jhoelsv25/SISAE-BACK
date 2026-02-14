@@ -1,0 +1,16 @@
+services:
+  redis:
+    image: redis:7
+    container_name: redis-academico
+    ports:
+      - "${REDIS_PORT}:6379"
+    volumes:
+      - redis-academico-data:/data
+    command: redis-server --requirepass ${REDIS_PASSWORD}
+    environment:
+      - REDIS_HOST=${REDIS_HOST}
+      - REDIS_PORT=${REDIS_PORT}
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+
+volumes:
+  redis-academico-data:

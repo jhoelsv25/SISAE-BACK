@@ -27,6 +27,11 @@ export class AssessmentScoresController {
     return this.assessmentScoresService.update(id, dto);
   }
 
+  @Post('bulk')
+  registerBulk(@Body() data: any) {
+    return this.assessmentScoresService.registerBulk(data);
+  }
+
   @Delete(':id')
   remove(@Param('id') id: string) {
     return this.assessmentScoresService.remove(id);

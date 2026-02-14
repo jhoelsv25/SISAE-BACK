@@ -77,4 +77,13 @@ export class AssessmentScoresService {
       throw new ErrorHandler('Ocurrió un error al eliminar el assessment score', 500);
     }
   }
+
+  async registerBulk(data: any) {
+    try {
+      const result = await this.repo.query('SELECT register_bulk_assessment_scores($1) as result', [JSON.stringify(data)]);
+      return result[0].result;
+    } catch (error) {
+      throw new ErrorHandler('Error al registrar notas masivas: ' + error.message, 500);
+    }
+  }
 }

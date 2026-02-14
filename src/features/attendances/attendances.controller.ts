@@ -27,6 +27,11 @@ export class AttendancesController {
     return this.attendancesService.update(id, dto);
   }
 
+  @Post('bulk')
+  registerBulk(@Body() data: any) {
+    return this.attendancesService.registerBulk(data);
+  }
+
   @Delete(':id')
   remove(@Param('id') id: string) {
     return this.attendancesService.remove(id);

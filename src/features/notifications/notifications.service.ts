@@ -1,17 +1,23 @@
+import { InjectQueue } from '@nestjs/bullmq';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { Queue } from 'bullmq';
 import { Repository } from 'typeorm';
 import { ErrorHandler } from '../../common/exceptions';
+import { JOBS, QUEUE } from '../../infrastruture/queues';
 import { CreateNotificationDto } from './dto/create-notification.dto';
 import { FilterNotificationDto } from './dto/filter-notification.dto';
 import { UpdateNotificationDto } from './dto/update-notification.dto';
 import { NotificationEntity } from './entities/notification.entity';
+import type { SendNotificationJobPayload } from './notifications.processor';
 
 @Injectable()
 export class NotificationsService {
   constructor(
     @InjectRepository(NotificationEntity)
     private readonly repo: Repository<NotificationEntity>,
+    @InjectQueue(QUEUE.NOTIFICATIONS)
+    private readonly notificationsQueue: Queue,
   ) {}
 
   async create(dto: CreateNotificationDto) {
@@ -70,5 +76,15 @@ export class NotificationsService {
     } catch (error) {
       throw new ErrorHandler('Ocurrió un error al eliminar la notificación', 500);
     }
+  }
+
+  /** Encola una notificación para envío asíncrono (procesada por Redis/BullMQ) */
+  async queueSend(dto: CreateNotificationDto, options?: { delay?: number }) {
+    const job = await this.notificationsQueue.add(
+      JOBS.SEND_NOTIFICATION,
+      { notification: dto } as SendNotificationJobPayload,
+      { delay: options?.delay, jobId: undefined },
+    );
+    return { message: 'Notificación encolada', jobId: job.id };
   }
 }

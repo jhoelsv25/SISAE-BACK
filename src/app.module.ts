@@ -10,6 +10,7 @@ import configurationConfig from './config/configuration.config';
 import { getDatabaseConfig } from './config/database.config';
 import { FeatureModule } from './features/features.module';
 import { HealthModule } from './health/health.module';
+import { InfrastructureModule } from './infrastruture/infrastruture.module';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { HealthModule } from './health/health.module';
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => getDatabaseConfig(configService),
     }),
+    InfrastructureModule,
     ExceptionsModule,
     AuditModule,
     HealthModule,

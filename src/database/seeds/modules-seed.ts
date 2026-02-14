@@ -26,7 +26,7 @@ export async function seedMenuModules(dataSource: DataSource) {
   const permissionRepository = dataSource.getRepository(PermissionEntity);
   const roleRepository = dataSource.getRepository(RoleEntity);
 
-  const menuStructure: MenuItem[] = [
+    const menuStructure: MenuItem[] = [
     {
       id: 'dashboard',
       icon: 'fa-home',

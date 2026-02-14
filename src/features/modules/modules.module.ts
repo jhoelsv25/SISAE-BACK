@@ -6,12 +6,14 @@ import { ModuleReadRepository } from './repositories/module-read.repository';
 import { ModuleWriteRepository } from './repositories/module.write.repository';
 import { ModulesService } from './services/modules.service';
 import {
-  CreateModuleUseCase,
-  GetModuleByIdUseCase,
-  GetModulesUseCase,
-  RemoveModuleUseCase,
-  UpdateModuleUseCase,
+    CreateModuleUseCase,
+    GetModuleByIdUseCase,
+    GetModulesUseCase,
+    RemoveModuleUseCase,
+    UpdateModuleUseCase,
 } from './use-cases';
+
+import { CacheModule } from '../../infrastruture/cache/cache.module';
 
 const repositories = [ModuleReadRepository, ModuleWriteRepository];
 const useCases = [
@@ -25,6 +27,6 @@ const useCases = [
 @Module({
   controllers: [ModulesController],
   providers: [ModulesService, ...repositories, ...useCases],
-  imports: [TypeOrmModule.forFeature([ModuleEntity])],
+  imports: [TypeOrmModule.forFeature([ModuleEntity]), CacheModule],
 })
 export class ModulesModule {}

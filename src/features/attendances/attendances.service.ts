@@ -79,4 +79,13 @@ export class AttendancesService {
       throw new ErrorHandler('Ocurrió un error al eliminar la asistencia', 500);
     }
   }
+
+  async registerBulk(data: any) {
+    try {
+      const result = await this.repo.query('SELECT register_bulk_attendance($1) as result', [JSON.stringify(data)]);
+      return result[0].result;
+    } catch (error) {
+      throw new ErrorHandler('Error al registrar asistencias masivas: ' + error.message, 500);
+    }
+  }
 }

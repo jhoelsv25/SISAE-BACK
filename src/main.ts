@@ -16,6 +16,7 @@ import { AppModule } from './app.module';
 import { GlobalExceptionFilter } from './common/exceptions/http-exception.filter';
 import { corsConfig } from './config/cors.config';
 import { swaggerConfig } from './config/swagger.config';
+import { RedisIoAdapter } from './infrastruture/sockets/redis-io-adapter';
 
 async function bootstrap() {
   process.env.TZ = 'UTC';
@@ -33,6 +34,10 @@ async function bootstrap() {
     logger.error('❌ Database connection failed:', error.message);
     logger.warn('⚠️ Application will continue without database connection');
   }
+
+  const redisIoAdapter = new RedisIoAdapter(app);
+  await redisIoAdapter.connectToRedis();
+  app.useWebSocketAdapter(redisIoAdapter);
 
   // Middlewares globales
   app.use(cookieParser());

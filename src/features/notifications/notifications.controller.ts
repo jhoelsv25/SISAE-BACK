@@ -13,6 +13,11 @@ export class NotificationsController {
     return this.notificationsService.create(dto);
   }
 
+  @Post('queue')
+  queue(@Body() dto: CreateNotificationDto) {
+    return this.notificationsService.queueSend(dto);
+  }
+
   @Get()
   findAll(@Query() filter: FilterNotificationDto) {
     return this.notificationsService.findAll(filter);
