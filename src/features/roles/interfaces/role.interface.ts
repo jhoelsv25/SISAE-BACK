@@ -18,6 +18,7 @@ export interface ModuleMap {
   icon?: string;
   visibility?: 'private' | 'public';
   permissions: string[];
+  availablePermissions: string[];
   children?: ModuleMap[];
 }
 export interface RoleByModule {

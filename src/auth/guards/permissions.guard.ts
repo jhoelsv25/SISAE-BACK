@@ -17,11 +17,15 @@ export class PermissionsGuard implements CanActivate {
     }
 
     const { user } = context.switchToHttp().getRequest();
+    
+    // Bypass for Super Admin
+    if (user?.role === 'Super Admin') return true;
+
     const userPermissions = user?.permissions || [];
     if (!requiredPermissions.every(permission => userPermissions.includes(permission))) {
       throw new ForbiddenException(
-        'No tienes permisos suficientes para acceder a este recurso. se requiere: ' +
-          requiredPermissions.join(', '),
+        'Acceso denegado: No tienes los permisos necesarios (' +
+          requiredPermissions.join(', ') + ') para realizar esta acción.',
       );
     }
     return true;

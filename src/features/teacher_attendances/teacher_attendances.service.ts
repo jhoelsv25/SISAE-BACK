@@ -76,4 +76,52 @@ export class TeacherAttendancesService {
       throw new ErrorHandler('Ocurrió un error al eliminar la asistencia del docente', 500);
     }
   }
+
+  async registerBulk(data: any) {
+    try {
+      const { date, attendances } = data;
+      // attendances is expected to be an array of objects: { teacherCode, status, observations, checkInTime }
+
+      const teacherCodes = attendances.map((a: any) => a.teacherCode).filter(Boolean);
+      const teachers = await this.repo.manager.query(
+        `SELECT id, "teacherCode" FROM teachers WHERE "teacherCode" = ANY($1)`,
+        [teacherCodes]
+      );
+      const teacherMap = new Map(teachers.map((t: any) => [t.teacherCode, t.id]));
+
+      const results = { success: true, message: 'Asistencias registradas correctamente', processed: 0, errors: [] as string[] };
+      for (const item of attendances) {
+        if (!item.teacherCode) continue;
+        const teacherId = teacherMap.get(item.teacherCode);
+        if (!teacherId) {
+          results.errors.push(`Docente con código ${item.teacherCode} no encontrado`);
+          continue;
+        }
+
+        const existing = await this.repo.findOne({ where: { date, teacher: { id: teacherId as string } } });
+        if (existing) {
+          this.repo.merge(existing, { 
+            status: item.status, 
+            observations: item.observations,
+            checkInTime: item.checkInTime || existing.checkInTime
+          });
+          await this.repo.save(existing);
+        } else {
+          const newAtt = this.repo.create({
+            date,
+            teacher: { id: teacherId as string },
+            status: item.status,
+            observations: item.observations,
+            leaveType: item.observations ? 'Permiso' : 'Asistencia Regular',
+            checkInTime: item.checkInTime || '00:00:00'
+          });
+          await this.repo.save(newAtt);
+        }
+        results.processed++;
+      }
+      return results;
+    } catch (error: any) {
+      throw new ErrorHandler('Error al registrar asistencias masivas de docentes: ' + error.message, 500);
+    }
+  }
 }

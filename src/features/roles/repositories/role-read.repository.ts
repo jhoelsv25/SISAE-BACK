@@ -1,10 +1,10 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { ErrorHandler } from '../../../common/exceptions';
+import { MENU_MODULES_MOCK, MenuItem } from '../../../common/constants/system-modules.mock';
 import { FilterRoleDto } from '../dto/filte-role.dto';
 import { RoleEntity } from '../entities/role.entity';
-import { ModuleTree, RoleByModule, RoleByModulePaginated } from '../interfaces/role.interface';
+import { ModuleMap, RoleByModule, RoleByModulePaginated } from '../interfaces/role.interface';
 
 @Injectable()
 export class RoleReadRepository {
@@ -20,13 +20,18 @@ export class RoleReadRepository {
     const query = this.repo
       .createQueryBuilder('role')
       .leftJoinAndSelect('role.permissions', 'permission')
+      .loadRelationCountAndMap('role.userCount', 'role.users')
+      .loadRelationCountAndMap('role.permissionsCount', 'role.permissions')
       .select([
         'role.id',
         'role.name',
         'role.description',
+        'role.isActive',
+        'role.isSystem',
         'role.createdAt',
         'permission.id',
         'permission.name',
+        'permission.slug',
       ]);
 
     if (filters?.search) {
@@ -43,7 +48,7 @@ export class RoleReadRepository {
     const role = await this.repo.findOne({
       where: { id },
       relations: ['permissions'],
-      select: { permissions: { id: true, name: true }, id: true, name: true },
+      select: { permissions: { id: true, name: true, slug: true }, id: true, name: true },
     });
     if (!role) throw new NotFoundException('Rol no encontrado');
     return role;
@@ -55,141 +60,128 @@ export class RoleReadRepository {
   async getModulesAndPermissionsByRoleId(roleId: string): Promise<RoleByModule> {
     const role = await this.repo.findOne({
       where: { id: roleId },
-      relations: ['permissions', 'permissions.module', 'permissions.module.parent'],
+      relations: ['permissions'],
     });
+
     if (!role) throw new NotFoundException('Rol no encontrado');
 
-    // Organizar módulos por ID
-    const modulesMap: Record<string, ModuleTree> = {};
+    // Mapear permisos por módulo para búsqueda rápida
+    const permissionsByModule: Record<string, string[]> = {};
     for (const perm of role.permissions) {
-      const module = perm.module;
-      if (!module) continue;
-      if (!modulesMap[module.id]) {
-        modulesMap[module.id] = {
-          id: module.id,
-          name: module.name,
-          description: module.description,
-          path: module.path?.startsWith('/') ? module.path : `/${module.path}`,
-          icon: module.icon,
-          visibility: module.visibility,
-          permissions: [],
-          children: [],
-          parentId: module.parent?.id || null,
-        };
+      if (!perm.module) continue;
+      if (!permissionsByModule[perm.module]) {
+        permissionsByModule[perm.module] = [];
       }
-      // Agrega el key del permiso, no el objeto action
-      modulesMap[module.id].permissions.push(perm.key);
+      permissionsByModule[perm.module].push(perm.slug);
     }
 
-    // Construir árbol recursivo
-    const buildTree = (parentId: string | null): ModuleTree[] => {
-      return Object.values(modulesMap)
-        .filter(module => module.parentId === parentId)
-        .map(module => ({
-          ...module,
-          children: buildTree(module.id),
-        }));
-    };
+    // Función recursiva para mapear Mock -> ModuleMap
+    const mapModule = (item: MenuItem): ModuleMap | null => {
+      const routeParts = item.route?.split('/').filter(part => part.length > 0) || [];
+      const moduleName = routeParts.length > 0 ? routeParts[routeParts.length - 1] : item.id;
 
-    // Limpiar nodos vacíos
-    const cleanModule = (module: ModuleTree) => {
-      const { parentId, children, ...rest } = module;
-      const cleaned: any = { ...rest };
-      if (children && children.length > 0) {
-        cleaned.children = children.map(cleanModule).filter(child => {
-          return child.permissions.length > 0 || (child.children && child.children.length > 0);
-        });
-        if (cleaned.children.length === 0) {
-          delete cleaned.children;
-        }
+      const directPermissions = permissionsByModule[moduleName] || [];
+      const children = (item.children || [])
+        .map(child => mapModule(child))
+        .filter(child => child !== null) as ModuleMap[];
+
+      // Para el admin UI, necesitamos ver el módulo si tiene permisos asignables (aunque el rol no tenga ninguno aún)
+      const availablePermissions = item.permissions || [];
+      if (directPermissions.length === 0 && children.length === 0 && availablePermissions.length === 0) {
+        return null;
       }
-      return cleaned;
+
+      return {
+        id: item.id,
+        name: item.label,
+        description: '',
+        path: item.route,
+        icon: item.icon,
+        visibility: item.visibility as any,
+        permissions: directPermissions,
+        availablePermissions,
+        children: children.length > 0 ? children : undefined,
+      };
     };
 
-    const rootModules = buildTree(null);
-    const modules = rootModules.map(cleanModule);
-    return { role: { id: role.id, name: role.name }, modules };
+    const modules = MENU_MODULES_MOCK.map(m => mapModule(m)).filter(m => m !== null) as ModuleMap[];
+
+    return {
+      role: { id: role.id, name: role.name },
+      modules,
+    };
   }
 
   async getModuleByRoleIdPaginated(
     id: string,
     filter?: FilterRoleDto,
   ): Promise<RoleByModulePaginated> {
-    try {
-      const { page = 1, size = 20, search } = filter || {};
-      const role = await this.repo.findOne({
-        where: { id },
-        relations: ['permissions', 'permissions.module', 'permissions.module.parent'],
-      });
-      if (!role) throw new ErrorHandler('El rol no existe en el sistema');
-      const modulesMap: Record<string, ModuleTree> = {};
-      for (const perm of role.permissions) {
-        const module = perm.module;
-        if (!module) continue;
-        if (!modulesMap[module.id]) {
-          modulesMap[module.id] = {
-            id: module.id,
-            name: module.name,
-            description: module.description,
-            path: module.path?.startsWith('/') ? module.path : `/${module.path}`,
-            icon: module.icon,
-            visibility: module.visibility,
-            permissions: [],
-            children: [],
-            parentId: module.parent?.id || null,
-          };
-        }
-        modulesMap[module.id].permissions.push(perm.key);
+    const { page = 1, size = 20, search } = filter || {};
+
+    const role = await this.repo.findOne({
+      where: { id },
+      relations: ['permissions'],
+    });
+
+    if (!role) throw new NotFoundException('Rol no encontrado');
+
+    const permissionsByModule: Record<string, string[]> = {};
+    for (const perm of role.permissions) {
+      if (!perm.module) continue;
+      if (!permissionsByModule[perm.module]) {
+        permissionsByModule[perm.module] = [];
+      }
+      permissionsByModule[perm.module].push(perm.slug);
+    }
+
+    const mapModule = (item: MenuItem): ModuleMap | null => {
+      const availablePermissions = item.permissions || [];
+      const routeParts = item.route?.split('/').filter(part => part.length > 0) || [];
+      const moduleName = routeParts.length > 0 ? routeParts[routeParts.length - 1] : item.id;
+
+      const directPermissions = permissionsByModule[moduleName] || [];
+      const children = (item.children || [])
+        .map(child => mapModule(child))
+        .filter(child => child !== null) as ModuleMap[];
+
+      if (directPermissions.length === 0 && children.length === 0 && availablePermissions.length === 0) {
+        return null;
       }
 
-      // Construir árbol recursivo
-      const buildTree = (parentId: string | null): ModuleTree[] => {
-        return Object.values(modulesMap)
-          .filter(module => module.parentId === parentId)
-          .map(module => ({
-            ...module,
-            children: buildTree(module.id),
-          }));
-      };
-
-      // Limpiar nodos vacíos
-      const cleanModule = (module: ModuleTree) => {
-        const { parentId, children, ...rest } = module;
-        const cleaned: any = { ...rest };
-        if (children && children.length > 0) {
-          cleaned.children = children.map(cleanModule).filter(child => {
-            return child.permissions.length > 0 || (child.children && child.children.length > 0);
-          });
-          if (cleaned.children.length === 0) {
-            delete cleaned.children;
-          }
-        }
-        return cleaned;
-      };
-
-      // Filtrar módulos raíz por búsqueda
-      let rootModules = buildTree(null);
       if (search) {
         const searchLower = search.toLowerCase();
-        rootModules = rootModules.filter(
-          m =>
-            m.name.toLowerCase().includes(searchLower) ||
-            (m.description && m.description.toLowerCase().includes(searchLower)),
-        );
+        const matchesSearch =
+          item.label.toLowerCase().includes(searchLower) ||
+          (item.id.toLowerCase().includes(searchLower)) ||
+          children.length > 0;
+
+        if (!matchesSearch) return null;
       }
 
-      const total = rootModules.length;
-      const paginatedModules = rootModules.slice((page - 1) * size, page * size).map(cleanModule);
-
       return {
-        role: { id: role.id, name: role.name },
-        modules: paginatedModules,
-        total,
-        page,
-        size,
+        id: item.id,
+        name: item.label,
+        description: '',
+        path: item.route,
+        icon: item.icon,
+        visibility: item.visibility as any,
+        permissions: directPermissions,
+        availablePermissions,
+        children: children.length > 0 ? children : undefined,
       };
-    } catch (error) {
-      throw new ErrorHandler('Error al obtener módulos paginados por rol', error);
-    }
+    };
+
+    const allModules = MENU_MODULES_MOCK.map(m => mapModule(m)).filter(m => m !== null) as ModuleMap[];
+
+    const total = allModules.length;
+    const paginatedModules = allModules.slice((page - 1) * size, page * size);
+
+    return {
+      role: { id: role.id, name: role.name },
+      modules: paginatedModules,
+      total,
+      page,
+      size,
+    };
   }
 }

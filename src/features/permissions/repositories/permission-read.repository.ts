@@ -17,15 +17,15 @@ export class PermissionReadRepository {
       const page = filters?.page ?? 1;
       const size = filters?.size ?? 20;
 
-      const query = this.repo
-        .createQueryBuilder('permission')
-        .leftJoinAndSelect('permission.module', 'module')
-        .leftJoinAndSelect('permission.action', 'action');
+      const query = this.repo.createQueryBuilder('permission');
 
       if (filters?.search) {
-        query.andWhere('permission.name ILIKE :search OR permission.key ILIKE :search', {
-          search: `%${filters.search}%`,
-        });
+        query.andWhere(
+          'permission.name ILIKE :search OR permission.slug ILIKE :search OR permission.module ILIKE :search',
+          {
+            search: `%${filters.search}%`,
+          },
+        );
       }
 
       // Filtro por fecha de creación
@@ -47,18 +47,13 @@ export class PermissionReadRepository {
 
       const [data, total] = await query.getManyAndCount();
 
-      // Mapear para devolver el módulo solo con id y name
       const mappedData = data.map(perm => ({
         id: perm.id,
-        key: perm.key,
+        slug: perm.slug,
         name: perm.name,
-        action: perm.action
-          ? { id: perm.action.id, key: perm.action.key, name: perm.action.name }
-          : null,
         description: perm.description,
-        module: perm.module
-          ? { id: perm.module.id, key: perm.module.key, name: perm.module.name }
-          : null,
+        module: perm.module,
+        scope: perm.scope,
         createdAt: perm.createdAt,
         updatedAt: perm.updatedAt,
       }));
@@ -76,12 +71,7 @@ export class PermissionReadRepository {
 
   async findOne(id: string) {
     try {
-      const permission = await this.repo
-        .createQueryBuilder('permission')
-        .leftJoinAndSelect('permission.module', 'module')
-        .leftJoinAndSelect('permission.action', 'action')
-        .where('permission.id = :id', { id })
-        .getOne();
+      const permission = await this.repo.findOne({ where: { id } });
 
       if (!permission) throw new NotFoundException('Permiso no encontrado');
       return permission;

@@ -1,26 +1,51 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 import { CreateSessionDto } from './dto/create-session.dto';
 import { UpdateSessionDto } from './dto/update-session.dto';
+import { SessionEntity } from './entities/session.entity';
 
 @Injectable()
 export class SessionsService {
-  create(createSessionDto: CreateSessionDto) {
-    return 'This action adds a new session';
+  constructor(
+    @InjectRepository(SessionEntity)
+    private readonly repository: Repository<SessionEntity>,
+  ) {}
+
+  async create(createSessionDto: CreateSessionDto) {
+    const { user, ...rest } = createSessionDto;
+    const session = this.repository.create({
+      ...rest,
+      user: { id: user } as any,
+    });
+    return await this.repository.save(session);
   }
 
-  findAll() {
-    return `This action returns all sessions`;
+  async findAll() {
+    const [data, total] = await this.repository.findAndCount({
+      relations: ['user'],
+      order: { lastActive: 'DESC' },
+    });
+    return { data, total };
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} session`;
+  async findOne(id: string) {
+    const session = await this.repository.findOne({
+      where: { id },
+      relations: ['user'],
+    });
+    if (!session) throw new NotFoundException('Sesión no encontrada');
+    return session;
   }
 
-  update(id: number, updateSessionDto: UpdateSessionDto) {
-    return `This action updates a #${id} session`;
+  async update(id: string, updateSessionDto: UpdateSessionDto) {
+    const session = await this.findOne(id);
+    Object.assign(session, updateSessionDto);
+    return await this.repository.save(session);
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} session`;
+  async remove(id: string) {
+    const session = await this.findOne(id);
+    return await this.repository.remove(session);
   }
 }

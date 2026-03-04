@@ -1,6 +1,5 @@
 import { DataSource } from 'typeorm';
 import { hashPassword } from '../../common/utils/password.util';
-import { ModuleEntity } from '../../features/modules/entities/module.entity';
 import { PermissionEntity } from '../../features/permissions/entities/permission.entity';
 import { RoleEntity } from '../../features/roles/entities/role.entity';
 import { UserEntity } from '../../features/users/entities/user.entity';
@@ -9,7 +8,6 @@ export async function seedAdminPermissions(dataSource: DataSource) {
   const userRepository = dataSource.getRepository(UserEntity);
   const roleRepository = dataSource.getRepository(RoleEntity);
   const permissionRepository = dataSource.getRepository(PermissionEntity);
-  const moduleRepository = dataSource.getRepository(ModuleEntity);
 
   // Buscar o crear usuario admin por defecto
   let user = await userRepository.findOne({
@@ -23,8 +21,6 @@ export async function seedAdminPermissions(dataSource: DataSource) {
       username: 'admin',
       password: hashedPassword,
       isActive: true,
-      // Puedes agregar status si es requerido por el entity
-      // status: UserStatus.ACTIVE,
     });
     await userRepository.save(user);
     console.log('✅ Usuario admin@sisae.com creado');
@@ -48,11 +44,8 @@ export async function seedAdminPermissions(dataSource: DataSource) {
   // Obtener todos los permisos existentes
   const allPermissions = await permissionRepository.find();
 
-  // Asignar todos los permisos al rol admin (evitar duplicados por id)
-  const uniquePermissions = allPermissions.filter(
-    (perm, index, self) => self.findIndex(p => p.id === perm.id) === index,
-  );
-  adminRole.permissions = uniquePermissions;
+  // Asignar todos los permisos al rol admin (evitar duplicados)
+  adminRole.permissions = allPermissions;
   await roleRepository.save(adminRole);
 
   // Asignar rol admin al usuario

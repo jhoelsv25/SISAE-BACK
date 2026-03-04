@@ -1,16 +1,17 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
-import {
-  IsArray,
-  IsBoolean,
-  IsNotEmpty,
-  IsString,
-  IsUUID,
-  MaxLength,
-  MinLength,
-} from 'class-validator';
+import { IsIn, IsNotEmpty, IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
 
 export class CreatePermissionDto {
+  @ApiProperty({
+    description: 'Identificador único del permiso (ej. module:read)',
+    example: 'users:create',
+    required: true,
+  })
+  @IsString({ message: 'El slug del permiso debe ser una cadena de texto' })
+  @IsNotEmpty({ message: 'El slug del permiso no puede estar vacío' })
+  slug: string;
+
   @ApiProperty({
     description: 'Nombre descriptivo del permiso',
     example: 'Crear Usuario',
@@ -24,43 +25,33 @@ export class CreatePermissionDto {
   name: string;
 
   @ApiProperty({
-    description: 'Acción que representa el permiso',
-    example: 'f47ac10b-58cc-4372-a567-0e02b2c3d479',
-    required: true,
-  })
-  @IsArray({ message: 'La acción del permiso debe ser un arreglo' })
-  @IsNotEmpty({ message: 'La acción del permiso no puede estar vacía' })
-  @IsUUID('4', { each: true, message: 'La acción debe ser un UUID válido' })
-  actionIds: string[];
-
-  @ApiProperty({
     description: 'Descripción del permiso',
     example: 'Permiso para crear usuarios en el sistema',
     required: false,
     maxLength: 255,
   })
+  @IsOptional()
   @IsString({ message: 'La descripción debe ser una cadena de texto' })
   @MaxLength(255, { message: 'La descripción no puede tener más de 255 caracteres' })
   @Transform(({ value }) => value?.trim())
   description?: string;
 
   @ApiProperty({
-    description: 'ID del módulo al que pertenece el permiso',
-    example: 'f47ac10b-58cc-4372-a567-0e02b2c3d479',
+    description: 'Módulo al que pertenece el permiso',
+    example: 'users',
     required: true,
   })
-  @IsString({ message: 'El ID del módulo debe ser una cadena de texto' })
-  @IsNotEmpty({ message: 'El ID del módulo no puede estar vacío' })
-  @IsUUID(4, { message: 'El ID del módulo debe ser un UUID válido' })
-  moduleId: string;
+  @IsString({ message: 'El módulo debe ser una cadena de texto' })
+  @IsNotEmpty({ message: 'El módulo no puede estar vacío' })
+  module: string;
 
   @ApiProperty({
-    description: '¿Está activo el permiso?',
-    example: true,
+    description: 'Alcance del permiso, defecto shared',
+    example: 'shared',
     required: false,
   })
-  @IsNotEmpty({ message: 'El campo isActive no puede estar vacío' })
-  @IsBoolean({ message: 'El campo isActive debe ser un booleano' })
-  @Transform(({ value }) => (value === undefined ? true : value))
-  isActive?: boolean = true;
+  @IsOptional()
+  @IsString()
+  @IsIn(['system', 'shared'])
+  scope?: string = 'shared';
 }

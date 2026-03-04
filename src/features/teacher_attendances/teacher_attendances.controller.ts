@@ -31,4 +31,9 @@ export class TeacherAttendancesController {
   remove(@Param('id') id: string) {
     return this.teacherAttendancesService.remove(id);
   }
+
+  @Post('bulk')
+  registerBulk(@Body() data: any) {
+    return this.teacherAttendancesService.registerBulk(data);
+  }
 }

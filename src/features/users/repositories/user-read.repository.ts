@@ -15,7 +15,7 @@ export class UserReadRepository {
     try {
       const user = await this.repo.findOne({
         where: { id },
-        relations: ['role', 'role.permissions', 'role.permissions.module', 'person'],
+        relations: ['role', 'role.permissions', 'person'],
       });
       if (!user) throw new NotFoundException('Usuario no encontrado');
       return user;

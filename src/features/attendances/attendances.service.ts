@@ -82,9 +82,48 @@ export class AttendancesService {
 
   async registerBulk(data: any) {
     try {
+      // If data is coming from Excel, it has `attendances` with `studentCode` instead of `enrollmentId`.
+      // The DB procedure `register_bulk_attendance` requires `enrollmentId`.
+      // We will look up the enrollments based on `studentCode` and `sectionCourseId`.
+      if (data.attendances && data.attendances.length > 0 && data.attendances[0].studentCode) {
+        const studentCodes = data.attendances.map((a: any) => a.studentCode).filter(Boolean);
+        
+        if (studentCodes.length > 0) {
+          // Find enrollments for these students that match the target section course
+          const enrollments = await this.repo.manager.query(
+            `
+            SELECT e.id as "enrollmentId", s."studentCode"
+            FROM enrollments e
+            INNER JOIN students s ON e."studentId" = s.id
+            INNER JOIN section_courses sc ON sc."sectionId" = e."sectionId"
+            WHERE sc.id = $1 AND s."studentCode" = ANY($2)
+            `,
+            [data.sectionCourseId, studentCodes]
+          );
+
+          const enrollmentMap = new Map(enrollments.map((e: any) => [e.studentCode, e.enrollmentId]));
+
+          const validAttendances = [];
+          for (const att of data.attendances) {
+            const enrollmentId = enrollmentMap.get(att.studentCode);
+            if (enrollmentId) {
+              validAttendances.push({
+                ...att,
+                enrollmentId
+              });
+            }
+          }
+          data.attendances = validAttendances;
+        }
+      }
+
+      if (!data.attendances || data.attendances.length === 0) {
+        return { success: false, message: 'No se encontraron alumnos válidos para registrar asistencia.', processed: 0, errors: [] };
+      }
+
       const result = await this.repo.query('SELECT register_bulk_attendance($1) as result', [JSON.stringify(data)]);
       return result[0].result;
-    } catch (error) {
+    } catch (error: any) {
       throw new ErrorHandler('Error al registrar asistencias masivas: ' + error.message, 500);
     }
   }

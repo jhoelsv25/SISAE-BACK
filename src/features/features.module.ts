@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { AcademicYearModule } from './academic_years/academic_years.module';
-import { ActionsModule } from './actions/actions.module';
+
 import { AnnouncementsModule } from './announcements/announcements.module';
 import { AssessmentScoresModule } from './assessment_scores/assessment_scores.module';
 import { AssessmentsModule } from './assessments/assessments.module';
@@ -24,7 +24,6 @@ import { GuardiansModule } from './guardians/guardians.module';
 import { InstitutionModule } from './institution/institution.module';
 import { LearningMaterialsModule } from './learning_materials/learning_materials.module';
 import { LearningModulesModule } from './learning_modules/learning_modules.module';
-import { ModulesModule } from './modules/modules.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { PaymentsModule } from './payments/payments.module';
 import { PeriodsModule } from './periods/periods.module';
@@ -48,9 +47,7 @@ import { VirtualClassroomsModule } from './virtual_classrooms/virtual_classrooms
   imports: [
     UsersModule,
     RolesModule,
-    ModulesModule,
     PermissionsModule,
-    ActionsModule,
     AcademicYearModule,
     PeriodsModule,
     GradesModule,
