@@ -15,11 +15,19 @@ export class CoursesService {
 
   async create(dto: CreateCourseDto) {
     try {
-      const course = this.repo.create(dto);
+      const { subjectAreaId, gradeId, ...rest } = dto;
+      const course = this.repo.create({
+        ...rest,
+        competencies: rest.competencies ?? '',
+        syllabusUrl: rest.syllabusUrl ?? '',
+        subjectArea: { id: subjectAreaId },
+        grade: { id: gradeId },
+      });
       await this.repo.save(course);
       return { message: 'Curso creado correctamente', data: course };
     } catch (error) {
-      throw new ErrorHandler('Ocurrió un error al crear el curso', 500);
+      const message = error?.message ?? 'Ocurrió un error al crear el curso';
+      throw new ErrorHandler(message, 500);
     }
   }
 

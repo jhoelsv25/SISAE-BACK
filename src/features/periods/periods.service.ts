@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { PeriodStatus, PeriodType } from '@common/enums/global.enum';
 import { ErrorHandler } from '../../common/exceptions/error-handler';
 import { CreatePeriodDto } from './dto/create-period.dto';
 import { UpdatePeriodDto } from './dto/update-period.dto';
@@ -19,7 +20,16 @@ export class PeriodsService {
       if (exists) {
         return ErrorHandler.conflict(`El periodo '${dto.name}' ya existe`, 'Period');
       }
-      const entity = this.repo.create(dto);
+      const count = await this.repo.count({ where: { academicYear: { id: dto.academicYearId } } });
+      const entity = this.repo.create({
+        name: dto.name,
+        startDate: new Date(dto.startDate),
+        endDate: new Date(dto.endDate),
+        periodNumber: count + 1,
+        type: PeriodType.SEMESTER,
+        status: PeriodStatus.PLANNED,
+        academicYear: { id: dto.academicYearId },
+      });
       return await this.repo.save(entity);
     } catch (error) {
       return ErrorHandler.handleUnknownError(error, 'Error al crear periodo');

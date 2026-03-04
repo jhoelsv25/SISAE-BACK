@@ -29,9 +29,8 @@ export class CompetenciesService {
   async findAll(filter: any) {
     try {
       const competencies = await this.repo.find({
-        where: {
-          ...filter,
-        },
+        where: { ...filter },
+        relations: ['course'],
       });
       return { message: 'Competencias encontradas correctamente', data: competencies };
     } catch (error) {
@@ -41,7 +40,10 @@ export class CompetenciesService {
 
   async findOne(id: string) {
     try {
-      const competency = await this.repo.findOne({ where: { id } });
+      const competency = await this.repo.findOne({
+        where: { id },
+        relations: ['course'],
+      });
       if (!competency) {
         throw new ErrorHandler('Competencia no encontrada', 404);
       }

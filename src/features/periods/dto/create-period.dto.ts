@@ -1,5 +1,4 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { Type } from 'class-transformer';
 import { IsDateString, IsString, Validate } from 'class-validator';
 import { DateOrderValidator } from '../../../common/dtos/date-order-validate.dto';
 
@@ -8,16 +7,14 @@ export class CreatePeriodDto {
   @IsString()
   name: string;
 
-  @ApiProperty({ example: '2025-03-02' })
-  @IsDateString()
-  @Type(() => Date)
-  startDate: Date;
+  @ApiProperty({ example: '2025-03-02', description: 'Fecha en formato ISO 8601 (YYYY-MM-DD)' })
+  @IsDateString({}, { message: 'startDate must be a valid ISO 8601 date string' })
+  startDate: string;
 
-  @ApiProperty({ example: '2025-05-03' })
-  @IsDateString()
-  @Type(() => Date)
+  @ApiProperty({ example: '2025-05-03', description: 'Fecha en formato ISO 8601 (YYYY-MM-DD)' })
+  @IsDateString({}, { message: 'endDate must be a valid ISO 8601 date string' })
   @Validate(DateOrderValidator, ['startDate'], { message: 'endDate debe ser mayor que startDate' })
-  endDate: Date;
+  endDate: string;
 
   @ApiProperty({ example: 'uuid-del-año-académico' })
   @IsString()

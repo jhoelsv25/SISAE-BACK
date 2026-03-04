@@ -1,6 +1,6 @@
-import { Column, Entity, ManyToOne } from 'typeorm';
+import { Column, Entity, JoinColumn, ManyToOne } from 'typeorm';
 import { BaseEntity } from '../../../common/entities/base.entity';
-import { GradeEntity } from '../../grades/entities/grade.entity';
+import { GradeLevelEntity } from '../../grade_level/entities/grade_leevel.entity';
 import { SubjectAreaEntity } from '../../subject_area/entities/subject_area.entity';
 
 @Entity({ name: 'courses' })
@@ -29,8 +29,10 @@ export class CourseEntity extends BaseEntity {
   syllabusUrl: string; //url del syllabus del curso
 
   @ManyToOne(() => SubjectAreaEntity)
+  @JoinColumn({ name: 'subject_area_id' })
   subjectArea: SubjectAreaEntity;
 
-  @ManyToOne(() => GradeEntity)
-  grade: GradeEntity;
+  @ManyToOne(() => GradeLevelEntity)
+  @JoinColumn({ name: 'grade_id' })
+  grade: GradeLevelEntity;
 }

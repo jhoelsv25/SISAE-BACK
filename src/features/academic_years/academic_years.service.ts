@@ -67,7 +67,10 @@ export class AcademicYearService {
 
   async findAll(): Promise<AcademicYearEntity[]> {
     try {
-      return await this.repo.find({ order: { year: 'DESC' } });
+      return await this.repo.find({
+        order: { year: 'DESC' },
+        relations: ['periods'],
+      });
     } catch (error) {
       return ErrorHandler.handleUnknownError(error, 'Error al obtener años académicos');
     }
@@ -75,7 +78,10 @@ export class AcademicYearService {
 
   async findOne(id: string): Promise<AcademicYearEntity> {
     try {
-      const entity = await this.repo.findOne({ where: { id } });
+      const entity = await this.repo.findOne({
+        where: { id },
+        relations: ['periods'],
+      });
       if (!entity) {
         return ErrorHandler.notFound('Año académico no encontrado', 'AcademicYear');
       }

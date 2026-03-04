@@ -23,7 +23,7 @@ export class SectionCourseService {
         course: course ? { id: course } : undefined,
       });
       await this.repo.save(sectionCourse);
-      return sectionCourse;
+      return { message: 'Curso asignado a sección correctamente', data: sectionCourse };
     } catch (error) {
       throw new ErrorHandler('Ocurrió un error al crear el sectionCourse', 500);
     }
@@ -33,6 +33,7 @@ export class SectionCourseService {
     try {
       const [data, total] = await this.repo.findAndCount({
         where: filter,
+        relations: ['section', 'course', 'academicYear'],
       });
       return { message: 'sectionCourse obtenidos correctamente', data, total };
     } catch (error) {

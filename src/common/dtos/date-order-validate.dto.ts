@@ -6,11 +6,13 @@ import {
 
 @ValidatorConstraint({ name: 'DateOrderValidator', async: false })
 export class DateOrderValidator implements ValidatorConstraintInterface {
-  validate(endDate: Date, args: ValidationArguments) {
+  validate(endDate: string | Date, args: ValidationArguments) {
     const [relatedPropertyName] = args.constraints;
-    const startDate = (args.object as any)[relatedPropertyName];
-    if (!startDate || !endDate) return true; // deja pasar si alguna fecha no está definida
-    return endDate > startDate;
+    const startDate = (args.object as Record<string, unknown>)[relatedPropertyName] as string | Date | undefined;
+    if (startDate == null || endDate == null) return true;
+    const end = typeof endDate === 'string' ? new Date(endDate).getTime() : endDate.getTime();
+    const start = typeof startDate === 'string' ? new Date(startDate).getTime() : startDate.getTime();
+    return end > start;
   }
 
   defaultMessage(args: ValidationArguments) {
