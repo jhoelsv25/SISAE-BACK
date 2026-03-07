@@ -1,10 +1,9 @@
 import { BaseEntity } from '@common/entities/base.entity';
-import { Column, Entity, ManyToOne, OneToMany } from 'typeorm';
+import { Column, Entity, ManyToOne } from 'typeorm';
 import { AcademicYearEntity } from '../../academic_years/entities/academic_year.entity';
 import { EnrollmentEntity } from '../../enrollments/entities/enrollment.entity';
 import { PeriodEntity } from '../../periods/entities/period.entity';
 import { SectionCourseEntity } from '../../section-course/entities/section-course.entity';
-import { SectionEntity } from '../../sections/entities/section.entity';
 import { TeacherEntity } from '../../teachers/entities/teacher.entity';
 import { GradeStatus } from '../enums/grade.enum';
 
@@ -45,8 +44,4 @@ export class GradeEntity extends BaseEntity {
 
   @ManyToOne(() => AcademicYearEntity)
   teacher: TeacherEntity;
-
-  // Relación con Secciones
-  @OneToMany(() => SectionEntity, section => section.grade, { cascade: true })
-  sections: SectionEntity[];
 }

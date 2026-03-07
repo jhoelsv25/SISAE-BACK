@@ -1,5 +1,6 @@
 import { StatusType } from '@common/enums/global.enum';
 import { ApiProperty } from '@nestjs/swagger';
+import { Transform } from 'class-transformer';
 import { IsEnum, IsInt, IsOptional, IsString, IsUUID, Max, Min } from 'class-validator';
 import { SectionShift } from '../enums/section.enum';
 
@@ -10,9 +11,16 @@ export class CreateSectionDto {
 
   @ApiProperty({ example: 30, required: false })
   @IsOptional()
-  @IsInt()
-  @Min(1)
-  @Max(100)
+  @Transform(({ value }) => {
+    if (value === '' || value == null) return undefined;
+    const n = Number(value);
+    if (Number.isNaN(n)) return undefined;
+    const int = Math.floor(n);
+    return int >= 1 && int <= 100 ? int : undefined;
+  })
+  @IsInt({ message: 'La capacidad debe ser un número entero.' })
+  @Min(1, { message: 'La capacidad debe ser al menos 1.' })
+  @Max(100, { message: 'La capacidad no puede ser mayor a 100.' })
   capacity?: number;
 
   @ApiProperty({
@@ -55,6 +63,11 @@ export class CreateSectionDto {
     required: false,
   })
   @IsOptional()
+  @Transform(({ value }) => {
+    if (value === '' || value == null) return 0;
+    const n = Number(value);
+    return Number.isNaN(n) ? 0 : Math.max(0, Math.floor(n));
+  })
   @IsInt({ message: 'Los espacios disponibles deben ser un número entero.' })
   @Min(0, { message: 'Los espacios disponibles no pueden ser negativos.' })
   availableSlots?: number;

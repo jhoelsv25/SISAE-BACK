@@ -1,7 +1,7 @@
 import { BaseEntity } from '@common/entities/base.entity';
 import { StatusType } from '@common/enums/global.enum';
 import { AcademicYearEntity } from '@features/academic_years/entities/academic_year.entity';
-import { GradeEntity } from '@features/grades/entities/grade.entity';
+import { GradeLevelEntity } from '@features/grade_level/entities/grade_leevel.entity';
 import { SectionShift } from '@features/sections/enums/section.enum';
 import { Column, Entity, JoinColumn, ManyToOne } from 'typeorm';
 
@@ -27,9 +27,9 @@ export class SectionEntity extends BaseEntity {
   @Column({ type: 'int' })
   availableSlots: number; //TODO: Espacios disponibles en la sección
 
-  @ManyToOne(() => GradeEntity, grade => grade.sections)
+  @ManyToOne(() => GradeLevelEntity)
   @JoinColumn({ name: 'gradeId' })
-  grade: GradeEntity;
+  grade: GradeLevelEntity;
 
   @ManyToOne(() => AcademicYearEntity)
   yearAcademic: AcademicYearEntity;
