@@ -1,6 +1,6 @@
 import { StatusType } from '@common/enums/global.enum';
 import { ApiProperty } from '@nestjs/swagger';
-import { IsEnum, IsInt, IsUUID } from 'class-validator';
+import { IsEnum, IsInt, IsOptional, IsUUID } from 'class-validator';
 import { Modality } from '../enums/section_course.enum';
 
 export class CreateSectionCourseDto {
@@ -46,4 +46,13 @@ export class CreateSectionCourseDto {
   })
   @IsUUID('4', { message: 'El curso debe ser un UUID válido.' })
   course: string;
+
+  @ApiProperty({
+    example: 'd1e2f3a4-5b6c-7d8e-9f0a-1b2c3d4e5f6a',
+    description: 'ID del docente que imparte el curso (UUID)',
+    required: false,
+  })
+  @IsOptional()
+  @IsUUID('4', { message: 'El docente debe ser un UUID válido.' })
+  teacher?: string;
 }

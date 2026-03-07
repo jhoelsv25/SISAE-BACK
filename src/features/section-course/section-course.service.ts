@@ -15,12 +15,13 @@ export class SectionCourseService {
 
   async create(dto: CreateSectionCourseDto) {
     try {
-      const { academicYear, section, course, ...rest } = dto;
+      const { academicYear, section, course, teacher, ...rest } = dto;
       const sectionCourse = this.repo.create({
         ...rest,
         academicYear: academicYear ? { id: academicYear } : undefined,
         section: section ? { id: section } : undefined,
         course: course ? { id: course } : undefined,
+        teacher: teacher ? { id: teacher } : undefined,
       });
       await this.repo.save(sectionCourse);
       return { message: 'Curso asignado a sección correctamente', data: sectionCourse };
@@ -33,7 +34,7 @@ export class SectionCourseService {
     try {
       const [data, total] = await this.repo.findAndCount({
         where: filter,
-        relations: ['section', 'course', 'academicYear'],
+        relations: ['section', 'course', 'academicYear', 'teacher', 'teacher.person'],
       });
       return { message: 'sectionCourse obtenidos correctamente', data, total };
     } catch (error) {
@@ -57,13 +58,13 @@ export class SectionCourseService {
 
   async update(id: string, updateSectionCourseDto: UpdateSectionCourseDto) {
     try {
-      const { academicYear, section, course, ...rest } = updateSectionCourseDto;
-      await this.repo.update(id, {
-        ...rest,
-        academicYear: academicYear ? { id: academicYear } : undefined,
-        section: section ? { id: section } : undefined,
-        course: course ? { id: course } : undefined,
-      });
+      const { academicYear, section, course, teacher, ...rest } = updateSectionCourseDto;
+      const payload: Record<string, unknown> = { ...rest };
+      if (academicYear !== undefined) payload.academicYear = academicYear ? { id: academicYear } : undefined;
+      if (section !== undefined) payload.section = section ? { id: section } : undefined;
+      if (course !== undefined) payload.course = course ? { id: course } : undefined;
+      if (teacher !== undefined) payload.teacherId = teacher || null;
+      await this.repo.update(id, payload);
       const updatedSectionCourse = await this.repo.findOne({ where: { id } });
       if (!updatedSectionCourse) {
         throw new ErrorHandler('sectionCourse no encontrado', 404);

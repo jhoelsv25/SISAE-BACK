@@ -41,7 +41,10 @@ export class TeachersService {
         }
       }
 
-      const qb = this.teachersRepository.createQueryBuilder('teacher').where(where);
+      const qb = this.teachersRepository
+        .createQueryBuilder('teacher')
+        .leftJoinAndSelect('teacher.person', 'person')
+        .where(where);
 
       if (search) {
         qb.andWhere(
@@ -67,7 +70,10 @@ export class TeachersService {
 
   async findOne(id: string): Promise<Response<TeacherEntity>> {
     try {
-      const teacher = await this.teachersRepository.findOne({ where: { id } });
+      const teacher = await this.teachersRepository.findOne({
+        where: { id },
+        relations: ['person'],
+      });
       if (!teacher) {
         throw new ErrorHandler('Docente no encontrado', 404);
       }

@@ -4,6 +4,7 @@ import { AcademicYearEntity } from '@features/academic_years/entities/academic_y
 import { CourseEntity } from '@features/courses/entities/course.entity';
 import { Modality } from '@features/section-course/enums/section_course.enum';
 import { SectionEntity } from '@features/sections/entities/section.entity';
+import { TeacherEntity } from '@features/teachers/entities/teacher.entity';
 import { Column, Entity, JoinColumn, ManyToOne } from 'typeorm';
 
 @Entity({ name: 'section_courses' })
@@ -30,4 +31,8 @@ export class SectionCourseEntity extends BaseEntity {
   @ManyToOne(() => CourseEntity)
   @JoinColumn({ name: 'courseId' })
   course: CourseEntity;
+
+  @ManyToOne(() => TeacherEntity, { nullable: true })
+  @JoinColumn({ name: 'teacherId' })
+  teacher: TeacherEntity;
 }

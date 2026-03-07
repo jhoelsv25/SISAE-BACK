@@ -14,14 +14,26 @@ export class SchedulesService {
   ) {}
   async create(createScheduleDto: CreateScheduleDto) {
     try {
-      const { sectionCourse, ...rest } = createScheduleDto;
+      const { sectionCourse, description, ...rest } = createScheduleDto;
       const schedule = this.repo.create({
         ...rest,
+        description: description ?? '',
         sectionCourse: sectionCourse ? { id: sectionCourse } : undefined,
       });
       return this.repo.save(schedule);
-    } catch (error) {
-      throw new ErrorHandler('Ocurrio un error al crear el horario', 500);
+    } catch (error: any) {
+      const driverError = error?.driverError ?? error;
+      const code = driverError?.code;
+      if (code === '23502') {
+        throw new ErrorHandler('Falta completar un campo requerido. Por favor revise los datos.', 400, 'Schedule');
+      }
+      if (code === '23503') {
+        throw new ErrorHandler('La sección-curso seleccionada no es válida.', 400, 'Schedule');
+      }
+      if (code === '23505') {
+        throw new ErrorHandler('Ya existe un horario con estos datos.', 409, 'Schedule');
+      }
+      throw new ErrorHandler('Ocurrió un error al crear el horario. Intente nuevamente.', 500, 'Schedule');
     }
   }
 
@@ -35,14 +47,25 @@ export class SchedulesService {
 
   async update(id: string, updateScheduleDto: UpdateScheduleDto) {
     try {
-      const { sectionCourse, ...rest } = updateScheduleDto;
-      await this.repo.update(id, {
-        ...rest,
-        sectionCourse: sectionCourse ? { id: sectionCourse } : undefined,
-      });
+      const { sectionCourse, description, ...rest } = updateScheduleDto;
+      const payload: Record<string, unknown> = { ...rest };
+      if (description !== undefined) payload.description = description;
+      if (sectionCourse !== undefined) payload.sectionCourse = sectionCourse ? { id: sectionCourse } : undefined;
+      await this.repo.update(id, payload);
       return this.findOne(id);
-    } catch (error) {
-      throw new ErrorHandler('Ocurrio un error al actualizar el horario', 500);
+    } catch (error: any) {
+      const driverError = error?.driverError ?? error;
+      const code = driverError?.code;
+      if (code === '23502') {
+        throw new ErrorHandler('Falta completar un campo requerido. Por favor revise los datos.', 400, 'Schedule');
+      }
+      if (code === '23503') {
+        throw new ErrorHandler('La sección-curso seleccionada no es válida.', 400, 'Schedule');
+      }
+      if (code === '23505') {
+        throw new ErrorHandler('Ya existe un horario con estos datos.', 409, 'Schedule');
+      }
+      throw new ErrorHandler('Ocurrió un error al actualizar el horario. Intente nuevamente.', 500, 'Schedule');
     }
   }
 
@@ -50,7 +73,7 @@ export class SchedulesService {
     try {
       await this.repo.delete(id);
     } catch (error) {
-      throw new ErrorHandler('Ocurrio un error al eliminar el horario', 500);
+      throw new ErrorHandler('Ocurrió un error al eliminar el horario. Intente nuevamente.', 500);
     }
   }
 }
