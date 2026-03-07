@@ -29,7 +29,10 @@ export class SectionsService {
 
   async findAll(filter: any) {
     try {
-      const sections = await this.repo.find({ where: filter });
+      const sections = await this.repo.find({
+        where: filter,
+        relations: ['grade', 'yearAcademic'],
+      });
       return { message: 'Secciones encontradas correctamente', data: sections };
     } catch (error) {
       throw new ErrorHandler('Ocurrió un error al obtener las secciones', 500);
@@ -38,7 +41,10 @@ export class SectionsService {
 
   async findOne(id: string) {
     try {
-      const section = await this.repo.findOne({ where: { id } });
+      const section = await this.repo.findOne({
+        where: { id },
+        relations: ['grade', 'yearAcademic'],
+      });
       if (!section) {
         throw new ErrorHandler('Sección no encontrada', 404);
       }
@@ -50,10 +56,13 @@ export class SectionsService {
 
   async update(id: string, updateSectionDto: UpdateSectionDto) {
     try {
-      // Map grade string to object if necessary
+      // Map grade and yearAcademic strings to relation objects
       const entityLike: any = { ...updateSectionDto };
       if (typeof updateSectionDto.grade === 'string') {
         entityLike.grade = { id: updateSectionDto.grade };
+      }
+      if (typeof updateSectionDto.yearAcademic === 'string') {
+        entityLike.yearAcademic = { id: updateSectionDto.yearAcademic };
       }
       await this.repo.update(id, entityLike);
       return { message: 'Sección actualizada correctamente' };
