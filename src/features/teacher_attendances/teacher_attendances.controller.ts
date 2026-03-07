@@ -17,6 +17,11 @@ export class TeacherAttendancesController {
     return this.teacherAttendancesService.findAll(filter);
   }
 
+  @Get('teachers')
+  findTeachers() {
+    return this.teacherAttendancesService.findTeachers();
+  }
+
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.teacherAttendancesService.findOne(id);

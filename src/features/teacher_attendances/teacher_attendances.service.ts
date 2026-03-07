@@ -28,10 +28,33 @@ export class TeacherAttendancesService {
 
   async findAll(filter: any) {
     try {
-      const data = await this.repo.find({ where: filter });
+      const qb = this.repo
+        .createQueryBuilder('attendance')
+        .leftJoinAndSelect('attendance.teacher', 'teacher');
+
+      if (filter?.date) {
+        qb.andWhere('attendance.date = :date', { date: filter.date });
+      }
+
+      if (filter?.teacher) {
+        qb.andWhere('teacher.id = :teacherId', { teacherId: filter.teacher });
+      }
+
+      const data = await qb.orderBy('teacher.teacherCode', 'ASC').getMany();
       return { message: 'Asistencia del docente obtenida correctamente', data };
     } catch (error) {
       throw new ErrorHandler('Ocurrió un error al obtener la asistencia del docente', 500);
+    }
+  }
+
+  async findTeachers() {
+    try {
+      const data = await this.repo.manager.query(
+        'SELECT id, teacher_code AS "teacherCode", specialization FROM teachers ORDER BY teacher_code ASC',
+      );
+      return { message: 'Docentes obtenidos correctamente', data };
+    } catch (error) {
+      throw new ErrorHandler('Ocurrió un error al obtener docentes para asistencia', 500);
     }
   }
 
@@ -84,7 +107,7 @@ export class TeacherAttendancesService {
 
       const teacherCodes = attendances.map((a: any) => a.teacherCode).filter(Boolean);
       const teachers = await this.repo.manager.query(
-        `SELECT id, "teacherCode" FROM teachers WHERE "teacherCode" = ANY($1)`,
+        `SELECT id, teacher_code AS "teacherCode" FROM teachers WHERE teacher_code = ANY($1)`,
         [teacherCodes]
       );
       const teacherMap = new Map(teachers.map((t: any) => [t.teacherCode, t.id]));

@@ -43,7 +43,6 @@
     "migration:generate": "./scripts/migration-generate.sh",
     "migration:create": "./scripts/migration-create.sh",
     "migration:run": "npm run typeorm -- migration:run -d ./src/database/data-source.ts",
-    "migration:run:prod": "NODE_ENV=production npm run typeorm -- migration:run -d ./src/database/data-source.ts",
     "migration:revert": "npm run typeorm -- migration:revert -d ./src/database/data-source.ts",
     "migration:revert:prod": "NODE_ENV=production npm run typeorm -- migration:revert -d ./src/database/data-source.ts",
     "migration:show": "npm run typeorm -- migration:show -d ./src/database/data-source.ts",
