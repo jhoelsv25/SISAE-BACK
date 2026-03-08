@@ -30,7 +30,11 @@ export class AssessmentsService {
 
   async findAll(filter: any) {
     try {
-      return await this.repo.find({ where: filter });
+      const assessments = await this.repo.find({
+        where: filter,
+        relations: ['period', 'sectionCourse', 'sectionCourse.course', 'sectionCourse.section'],
+      });
+      return { data: assessments, total: assessments.length };
     } catch (error) {
       throw new ErrorHandler('Ocurrió un error al obtener las assessments', 500);
     }

@@ -13,17 +13,9 @@ export interface ExcelParseResult {
   rows: Record<string, unknown>[];
 }
 
-/**
- * Servicio global y reutilizable para Excel.
- * - generate: genera archivo con headers + data
- * - generateTemplate: genera plantilla con headers + fila ejemplo opcional
- * - parse: extrae headers y filas de un buffer
- */
+
 @Injectable()
 export class ExcelService {
-  /**
-   * Genera buffer .xlsx a partir de columnas y datos.
-   */
   generate(
     columns: ExcelColumn[],
     data: Record<string, unknown>[],
@@ -40,10 +32,6 @@ export class ExcelService {
     const buf = XLSX.write(wb, { bookType: 'xlsx', type: 'buffer' });
     return Buffer.from(buf);
   }
-
-  /**
-   * Genera plantilla solo con cabeceras (y opcional fila de ejemplo).
-   */
   generateTemplate(
     columns: ExcelColumn[],
     exampleRow?: Record<string, unknown>,
@@ -63,9 +51,6 @@ export class ExcelService {
     return Buffer.from(buf);
   }
 
-  /**
-   * Parsea buffer Excel. Primera fila = headers.
-   */
   parse(buffer: Buffer): ExcelParseResult {
     const wb = XLSX.read(buffer, { type: 'buffer' });
     const firstSheet = wb.Sheets[wb.SheetNames[0]];

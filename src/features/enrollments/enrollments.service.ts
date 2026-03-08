@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ErrorHandler } from '../../common/exceptions';
+import { SectionCourseEntity } from '../section-course/entities/section-course.entity';
 import { CreateEnrollmentDto } from './dto/create-enrollment.dto';
 import { UpdateEnrollmentDto } from './dto/update-enrollment.dto';
 import { EnrollmentEntity } from './entities/enrollment.entity';
@@ -29,12 +30,32 @@ export class EnrollmentsService {
 
   async findAll(filter: any) {
     try {
-      const enrollments = await this.repo.find({
-        where: filter,
-        relations: ['student', 'section'],
+      const { sectionCourse, ...otherFilters } = filter;
+      const query = this.repo.createQueryBuilder('enrollment')
+        .leftJoinAndSelect('enrollment.student', 'student')
+        .leftJoinAndSelect('student.person', 'person')
+        .leftJoinAndSelect('enrollment.section', 'section');
+
+      if (sectionCourse) {
+        query.innerJoin(
+          SectionCourseEntity,
+          'sc',
+          'sc.sectionId = enrollment.sectionId AND sc.id = :scId',
+          { scId: sectionCourse }
+        );
+      }
+
+      // Aplicar filtros adicionales de forma segura
+      Object.keys(otherFilters).forEach((key, index) => {
+        if (otherFilters[key] !== undefined && otherFilters[key] !== null) {
+          query.andWhere(`enrollment.${key} = :val${index}`, { [`val${index}`]: otherFilters[key] });
+        }
       });
+
+      const enrollments = await query.getMany();
       return { message: 'Inscripciones encontradas correctamente', data: enrollments };
     } catch (error) {
+      console.error('Error in EnrollmentsService.findAll:', error);
       throw new ErrorHandler('Ocurrió un error al buscar las inscripciones', 500);
     }
   }
