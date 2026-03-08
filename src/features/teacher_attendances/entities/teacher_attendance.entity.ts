@@ -21,6 +21,8 @@ export class TeacherAttendanceEntity extends BaseEntity {
   observations: string;
   @Column({ type: 'text', nullable: true })
   supportingDocuments: string;
+  @Column({ type: 'int', default: 1 })
+  vigencia: number;
 
   @ManyToOne(() => TeacherEntity)
   teacher: TeacherEntity;

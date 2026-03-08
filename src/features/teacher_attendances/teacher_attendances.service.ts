@@ -30,7 +30,8 @@ export class TeacherAttendancesService {
     try {
       const qb = this.repo
         .createQueryBuilder('attendance')
-        .leftJoinAndSelect('attendance.teacher', 'teacher');
+        .leftJoinAndSelect('attendance.teacher', 'teacher')
+        .andWhere('attendance.vigencia = :vigencia', { vigencia: 1 });
 
       if (filter?.date) {
         qb.andWhere('attendance.date = :date', { date: filter.date });
@@ -60,7 +61,7 @@ export class TeacherAttendancesService {
 
   async findOne(id: string) {
     try {
-      const data = await this.repo.findOne({ where: { id } });
+      const data = await this.repo.findOne({ where: { id, vigencia: 1 } });
       if (!data) {
         throw new ErrorHandler('Asistencia del docente no encontrada', 404);
       }
@@ -72,7 +73,7 @@ export class TeacherAttendancesService {
 
   async update(id: string, dto: UpdateTeacherAttendanceDto) {
     try {
-      const attendance = await this.repo.findOne({ where: { id } });
+      const attendance = await this.repo.findOne({ where: { id, vigencia: 1 } });
       if (!attendance) {
         throw new ErrorHandler('Asistencia del docente no encontrada', 404);
       }
@@ -89,11 +90,11 @@ export class TeacherAttendancesService {
 
   async remove(id: string) {
     try {
-      const attendance = await this.repo.findOne({ where: { id } });
+      const attendance = await this.repo.findOne({ where: { id, vigencia: 1 } });
       if (!attendance) {
         throw new ErrorHandler('Asistencia del docente no encontrada', 404);
       }
-      await this.repo.remove(attendance);
+      await this.repo.update(id, { vigencia: 0 });
       return { message: 'Asistencia del docente eliminada correctamente' };
     } catch (error) {
       throw new ErrorHandler('Ocurrió un error al eliminar la asistencia del docente', 500);
@@ -121,7 +122,9 @@ export class TeacherAttendancesService {
           continue;
         }
 
-        const existing = await this.repo.findOne({ where: { date, teacher: { id: teacherId as string } } });
+        const existing = await this.repo.findOne({
+          where: { date, teacher: { id: teacherId as string }, vigencia: 1 },
+        });
         if (existing) {
           this.repo.merge(existing, { 
             status: item.status, 
@@ -136,7 +139,8 @@ export class TeacherAttendancesService {
             status: item.status,
             observations: item.observations,
             leaveType: item.observations ? 'Permiso' : 'Asistencia Regular',
-            checkInTime: item.checkInTime || '00:00:00'
+            checkInTime: item.checkInTime || '00:00:00',
+            vigencia: 1,
           });
           await this.repo.save(newAtt);
         }

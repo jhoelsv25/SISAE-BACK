@@ -2,6 +2,8 @@ import { DataSource } from 'typeorm';
 import { seedMenuModules } from './modules-seed';
 import { seedAdminPermissions } from './permission-seed';
 import { seedRoles } from './roles-seed';
+import { seedTeacherAttendances } from './teacher-attendances-seed';
+import { seedTeachers } from './teachers-seed';
 
 export async function runSeeds(dataSource: DataSource) {
   try {
@@ -13,6 +15,12 @@ export async function runSeeds(dataSource: DataSource) {
 
     // Asignar todos los permisos al super admin
     await seedAdminPermissions(dataSource);
+
+    // Seed de docentes base
+    await seedTeachers(dataSource);
+
+    // Seed de asistencias docentes (demo)
+    await seedTeacherAttendances(dataSource);
 
     console.log('✅ All seeds completed successfully');
   } catch (error) {
