@@ -30,7 +30,10 @@ export class StudentGuardiansService {
 
   async findAll(filter: any) {
     try {
-      const data = await this.repo.find({ where: filter });
+      const data = await this.repo.find({
+        where: filter,
+        relations: ['student', 'student.person', 'guardian', 'guardian.person'],
+      });
       return { message: 'Lista de tutores de estudiantes obtenida correctamente', data };
     } catch (error) {
       throw new ErrorHandler('Ocurrió un error al obtener la lista de tutores de estudiantes', 500);

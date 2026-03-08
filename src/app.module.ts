@@ -5,6 +5,7 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuditModule } from './audit/audit.module';
 import { AuthModule } from './auth/auth.module';
+import { ExcelModule } from './common/excel/excel.module';
 import { ExceptionsModule } from './common/exceptions/exceptions.module';
 import configurationConfig from './config/configuration.config';
 import { getDatabaseConfig } from './config/database.config';
@@ -24,6 +25,7 @@ import { InfrastructureModule } from './infrastruture/infrastruture.module';
     }),
     InfrastructureModule,
     ExceptionsModule,
+    ExcelModule,
     AuditModule,
     HealthModule,
     FeatureModule,

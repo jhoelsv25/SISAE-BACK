@@ -30,7 +30,10 @@ export class StudentObservationsService {
 
   async findAll(filter: any) {
     try {
-      const observations = await this.repo.find({ where: filter });
+      const observations = await this.repo.find({
+        where: filter,
+        relations: ['student', 'student.person', 'teacher', 'teacher.person'],
+      });
       return {
         message: 'Observaciones del estudiante obtenidas correctamente',
         data: observations,

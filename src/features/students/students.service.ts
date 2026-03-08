@@ -2,17 +2,27 @@ import { ErrorHandler } from '@common/exceptions';
 import { PaginatedResponse, Response } from '@common/types/global.types';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { FindOptionsWhere, Repository } from 'typeorm';
+import { DataSource, FindOptionsWhere, Repository } from 'typeorm';
+import { DocumentType, Gender, MaterialStatus } from '@features/persons/enums/person.enum';
+import { StudentStatus, StudentType } from './enums/student.enum';
 import { CreateStudentDto } from './dto/create-student.dto';
 import { FilterStudentDto } from './dto/filter-student.dto';
+import { ImportStudentsDto } from './dto/import-students.dto';
 import { UpdateStudentDto } from './dto/update-student.dto';
 import { StudentEntity } from './entities/student.entity';
+import { PersonEntity } from '@features/persons/entities/person.entity';
+import { InstitutionEntity } from '@features/institution/entities/institution.entity';
 
 @Injectable()
 export class StudentsService {
   constructor(
     @InjectRepository(StudentEntity)
     private readonly studentsRepository: Repository<StudentEntity>,
+    @InjectRepository(PersonEntity)
+    private readonly personsRepository: Repository<PersonEntity>,
+    @InjectRepository(InstitutionEntity)
+    private readonly institutionsRepository: Repository<InstitutionEntity>,
+    private readonly dataSource: DataSource,
   ) {}
 
   async create(dto: CreateStudentDto): Promise<Response<StudentEntity>> {
@@ -88,6 +98,86 @@ export class StudentsService {
       return { message: 'Estudiante eliminado correctamente', data: null };
     } catch (error) {
       throw new ErrorHandler('Ocurrió un error al eliminar el estudiante', 500);
+    }
+  }
+
+  async import(dto: ImportStudentsDto): Promise<{ created: number; errors?: { row: number; message: string }[] }> {
+    const errors: { row: number; message: string }[] = [];
+    let created = 0;
+    const prefix = `imp-${Date.now()}`;
+
+    const [firstInstitution] = await this.institutionsRepository.find({ take: 1 });
+    const institutionId = firstInstitution?.id ?? null;
+
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      for (let i = 0; i < dto.rows.length; i++) {
+        const row = dto.rows[i];
+        try {
+          const nameParts = String(row.name ?? '').trim().split(/\s+/);
+          const firstName = nameParts[0] || 'Sin nombre';
+          const lastName = nameParts.slice(1).join(' ') || 'Importado';
+          const email = String(row.email ?? '').trim() || `${prefix}-${i}@import.local`;
+          const uniqueSuffix = `${prefix}-${i}`;
+
+          const person = queryRunner.manager.create(PersonEntity, {
+            documentType: DocumentType.DNI,
+            firstName,
+            lastName,
+            birthDate: new Date(2010, 0, 1),
+            gender: Gender.OTHER,
+            birthPlace: uniqueSuffix,
+            nationality: 'Peruana',
+            address: uniqueSuffix,
+            district: uniqueSuffix,
+            province: uniqueSuffix,
+            department: uniqueSuffix,
+            phone: uniqueSuffix,
+            mobile: uniqueSuffix,
+            email: email.includes('@') ? email : `${uniqueSuffix}@import.local`,
+            photoUrl: '',
+            materialStatus: MaterialStatus.SINGLE,
+          });
+          const savedPerson = await queryRunner.manager.save(PersonEntity, person);
+
+          const studentCode = `EST-${prefix}-${i}`;
+          const student = queryRunner.manager.create(StudentEntity, {
+            studentCode,
+            studentType: StudentType.REGULAR,
+            religion: 'No especificada',
+            nativeLanguage: 'Español',
+            hasDisability: false,
+            healthIssues: [],
+            insunranceNumber: uniqueSuffix,
+            bloodType: 'O+',
+            allergies: 'Ninguna',
+            medicalConditions: 'Ninguna',
+            admisionDate: new Date(),
+            withdrawalReason: '',
+            status: StudentStatus.ACTIVE,
+            institution: institutionId ? { id: institutionId } : undefined,
+            person: { id: savedPerson.id },
+          });
+          await queryRunner.manager.save(StudentEntity, student);
+          created++;
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : 'Error desconocido';
+          errors.push({ row: i + 1, message: msg });
+        }
+      }
+      await queryRunner.commitTransaction();
+      return { created, errors: errors.length > 0 ? errors : undefined };
+    } catch (err) {
+      await queryRunner.rollbackTransaction();
+      throw new ErrorHandler(
+        err instanceof Error ? err.message : 'Error al importar estudiantes',
+        500,
+      );
+    } finally {
+      await queryRunner.release();
     }
   }
 }

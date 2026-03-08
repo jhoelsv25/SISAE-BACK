@@ -30,7 +30,10 @@ export class GuardiansService {
 
   async findAll(filter: any) {
     try {
-      const guardians = await this.repo.find({ where: filter });
+      const guardians = await this.repo.find({
+        where: filter,
+        relations: ['person'],
+      });
       return { message: 'Guardians retrieved successfully', data: guardians };
     } catch (error) {
       throw new ErrorHandler('Error retrieving guardians', 500);

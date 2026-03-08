@@ -11,6 +11,7 @@ import { BehaviorRecordsModule } from './behavior_records/behavior_records.modul
 import { ChatMessagesModule } from './chat_messages/chat_messages.module';
 import { ChatParticipantsModule } from './chat_participants/chat_participants.module';
 import { ChatRoomsModule } from './chat_rooms/chat_rooms.module';
+import { ClassroomModule } from './classroom/classroom.module';
 import { CompetenciesModule } from './competencies/competencies.module';
 import { CoursesModule } from './courses/courses.module';
 import { EmailLogsModule } from './email_logs/email_logs.module';
@@ -87,6 +88,7 @@ import { VirtualClassroomsModule } from './virtual_classrooms/virtual_classrooms
     InstitutionModule,
     GradeLevelModule,
     SubjectAreaModule,
+    ClassroomModule,
   ],
   controllers: [],
   providers: [],
