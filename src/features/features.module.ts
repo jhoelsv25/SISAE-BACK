@@ -42,6 +42,7 @@ import { SubjectAreaModule } from './subject_area/subject_area.module';
 import { TeacherAttendancesModule } from './teacher_attendances/teacher_attendances.module';
 import { TeachersModule } from './teachers/teachers.module';
 import { UsersModule } from './users/users.module';
+import { UserPreferencesModule } from './user_preferences/user_preferences.module';
 import { VirtualClassroomsModule } from './virtual_classrooms/virtual_classrooms.module';
 
 @Module({
@@ -85,6 +86,7 @@ import { VirtualClassroomsModule } from './virtual_classrooms/virtual_classrooms
     ForumPostsModule,
     EmailLogsModule,
     CompetenciesModule,
+    UserPreferencesModule,
     InstitutionModule,
     GradeLevelModule,
     SubjectAreaModule,

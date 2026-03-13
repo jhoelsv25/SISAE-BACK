@@ -23,4 +23,14 @@ export class AuditController {
   async findOne(@Param('id') id: string) {
     return this.auditService.findOne(id);
   }
+
+  @Get('user/:userId')
+  @ApiOperation({ summary: 'Obtener logs de auditoría por usuario' })
+  async findByUser(
+    @Param('userId') userId: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.auditService.findByUser(userId, Number(page) || 1, Number(limit) || 10);
+  }
 }

@@ -13,8 +13,18 @@ export class AuthController {
   ) {}
 
   @Post('login')
-  async login(@Body() loginDto: LoginDto, @Res({ passthrough: true }) res: Response) {
-    const result = await this.authService.login(loginDto);
+  async login(
+    @Body() loginDto: LoginDto,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const ipAddress =
+      (req.headers['x-forwarded-for'] as string | undefined)?.split(',')[0]?.trim() ||
+      req.ip ||
+      'unknown';
+    const userAgent = req.headers['user-agent'] || 'unknown';
+
+    const result = await this.authService.login(loginDto, { ipAddress, userAgent });
     const { accessToken, refreshToken, user, modules } = result.data;
 
     // Establecer cookies
@@ -50,9 +60,10 @@ export class AuthController {
   }
 
   @Get('logout')
-  async logout(@Res({ passthrough: true }) res: Response) {
+  async logout(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
+    const refreshToken = req.cookies?.refreshToken;
     await this.authCookieService.clearAuthCookies(res);
-    return await this.authService.logout();
+    return await this.authService.logout(refreshToken);
   }
 
   @Get('check-token')

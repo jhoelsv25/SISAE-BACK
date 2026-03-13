@@ -26,6 +26,11 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
   }
 
   async onModuleDestroy() {
-    await Promise.all([this.client.quit(), this.subcriber.quit()]);
+    const closers: Promise<unknown>[] = [];
+    if (this.client) closers.push(this.client.quit());
+    if (this.subcriber) closers.push(this.subcriber.quit());
+    if (closers.length) {
+      await Promise.all(closers);
+    }
   }
 }

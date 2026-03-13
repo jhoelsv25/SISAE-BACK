@@ -29,6 +29,22 @@ export class SessionsService {
     return { data, total };
   }
 
+  async findByUser(userId: string, limit = 10, activeOnly = false) {
+    const query = this.repository
+      .createQueryBuilder('session')
+      .leftJoinAndSelect('session.user', 'user')
+      .where('user.id = :userId', { userId })
+      .orderBy('session.lastActive', 'DESC')
+      .limit(limit);
+
+    if (activeOnly) {
+      query.andWhere('session.expiresAt > NOW()');
+    }
+
+    const data = await query.getMany();
+    return { data, total: data.length };
+  }
+
   async findOne(id: string) {
     const session = await this.repository.findOne({
       where: { id },
@@ -47,5 +63,15 @@ export class SessionsService {
   async remove(id: string) {
     const session = await this.findOne(id);
     return await this.repository.remove(session);
+  }
+
+  async touchByToken(sessionToken: string) {
+    await this.repository.update({ sessionToken }, { lastActive: new Date() });
+  }
+
+  async removeByToken(sessionToken: string) {
+    const session = await this.repository.findOne({ where: { sessionToken } });
+    if (!session) return;
+    await this.repository.remove(session);
   }
 }

@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common';
 import { CreateSessionDto } from './dto/create-session.dto';
 import { UpdateSessionDto } from './dto/update-session.dto';
 import { SessionsService } from './sessions.service';
@@ -15,6 +15,19 @@ export class SessionsController {
   @Get()
   async findAll() {
     return this.sessionsService.findAll();
+  }
+
+  @Get('user/:userId')
+  async findByUser(
+    @Param('userId') userId: string,
+    @Query('limit') limit?: string,
+    @Query('active') active?: string,
+  ) {
+    return this.sessionsService.findByUser(
+      userId,
+      limit ? Number(limit) : 10,
+      active === 'true',
+    );
   }
 
   @Get(':id')

@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, Query } from '@nestjs/common';
 import { EmailLogsService } from './email_logs.service';
 import { CreateEmailLogDto } from './dto/create-email_log.dto';
 import { UpdateEmailLogDto } from './dto/update-email_log.dto';
@@ -17,18 +17,23 @@ export class EmailLogsController {
     return this.emailLogsService.findAll();
   }
 
+  @Get('user/:userId')
+  findByUser(@Param('userId') userId: string, @Query('limit') limit?: string) {
+    return this.emailLogsService.findByUser(userId, limit ? Number(limit) : 10);
+  }
+
   @Get(':id')
   findOne(@Param('id') id: string) {
-    return this.emailLogsService.findOne(+id);
+    return this.emailLogsService.findOne(id);
   }
 
   @Patch(':id')
   update(@Param('id') id: string, @Body() updateEmailLogDto: UpdateEmailLogDto) {
-    return this.emailLogsService.update(+id, updateEmailLogDto);
+    return this.emailLogsService.update(id, updateEmailLogDto);
   }
 
   @Delete(':id')
   remove(@Param('id') id: string) {
-    return this.emailLogsService.remove(+id);
+    return this.emailLogsService.remove(id);
   }
 }
