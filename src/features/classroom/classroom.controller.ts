@@ -16,14 +16,22 @@ export class ClassroomController {
     return this.classroomService.getChatHistory(sectionId);
   }
 
+  @UseGuards(JwtAuthGuard)
   @Get(':sectionCourseId/teachers')
   getTeachers(@Param('sectionCourseId') sectionId: string) {
     return this.classroomService.getTeachers(sectionId);
   }
 
+  @UseGuards(JwtAuthGuard)
+  @Get(':sectionCourseId/people')
+  getPeople(@Request() req: any, @Param('sectionCourseId') sectionId: string) {
+    return this.classroomService.getPeople(sectionId, req.user?.id);
+  }
+
+  @UseGuards(JwtAuthGuard)
   @Get(':sectionCourseId/tasks')
-  getTasks(@Param('sectionCourseId') sectionId: string) {
-    return this.classroomService.getTasks(sectionId);
+  getTasks(@Request() req: any, @Param('sectionCourseId') sectionId: string) {
+    return this.classroomService.getTasks(sectionId, req.user?.id);
   }
 
   @UseGuards(JwtAuthGuard)

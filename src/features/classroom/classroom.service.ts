@@ -1,14 +1,17 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { ErrorHandler } from '../../common/exceptions';
 import { AssigmentEntity } from '../assigments/entities/assigment.entity';
+import { AssigmentSubmissionEntity } from '../assigment_submissions/entities/assigment_submission.entity';
+import { AssigmentSubmissionStatus } from '../assigment_submissions/enums/assigment_submission.enum';
 import { AssessmentScoreEntity } from '../assessment_scores/entities/assessment_score.entity';
 import { AssessmentEntity } from '../assessments/entities/assessment.entity';
 import { ChatMessageEntity } from '../chat_messages/entities/chat_message.entity';
 import { ChatMessageType } from '../chat_messages/enums/chat_message.enum';
 import { ChatRoomType } from '../chat_rooms/enums/chat_room.enum';
 import { ChatRoomEntity } from '../chat_rooms/entities/chat_room.entity';
+import { EnrollmentEntity } from '../enrollments/entities/enrollment.entity';
 import { GuardianEntity } from '../guardians/entities/guardian.entity';
 import { LearningMaterialEntity } from '../learning_materials/entities/learning_material.entity';
 import { SectionCourseEntity } from '../section-course/entities/section-course.entity';
@@ -26,6 +29,8 @@ export class ClassroomService {
     private readonly materialRepo: Repository<LearningMaterialEntity>,
     @InjectRepository(AssigmentEntity)
     private readonly assignmentRepo: Repository<AssigmentEntity>,
+    @InjectRepository(AssigmentSubmissionEntity)
+    private readonly assignmentSubmissionRepo: Repository<AssigmentSubmissionEntity>,
     @InjectRepository(AssessmentEntity)
     private readonly assessmentRepo: Repository<AssessmentEntity>,
     @InjectRepository(AssessmentScoreEntity)
@@ -34,6 +39,8 @@ export class ClassroomService {
     private readonly chatRepo: Repository<ChatMessageEntity>,
     @InjectRepository(ChatRoomEntity)
     private readonly roomRepo: Repository<ChatRoomEntity>,
+    @InjectRepository(EnrollmentEntity)
+    private readonly enrollmentRepo: Repository<EnrollmentEntity>,
     @InjectRepository(UserEntity)
     private readonly userRepo: Repository<UserEntity>,
     @InjectRepository(StudentEntity)
@@ -113,6 +120,11 @@ export class ClassroomService {
 
   async publishPost(userId: string, sectionCourseId: string, content: string, attachmentUrl?: string) {
     try {
+      const canPublish = await this.canPublishInClassroom(userId);
+      if (!canPublish) {
+        throw new ErrorHandler('No tienes permisos para publicar en el aula', 403);
+      }
+
       const post = this.postRepo.create({
         content,
         attachmentUrl,
@@ -217,19 +229,137 @@ export class ClassroomService {
     ];
   }
 
-  async getTasks(sectionCourseId: string) {
+  async getPeople(sectionCourseId: string, userId?: string) {
+    const sectionCourse = await this.sectionCourseRepo.findOne({
+      where: { id: sectionCourseId },
+      relations: ['section', 'academicYear'],
+    });
+
+    if (!sectionCourse?.section?.id) {
+      return { teachers: [], students: [] };
+    }
+
+    const [teachers, allowedStudentIds, enrollments] = await Promise.all([
+      this.getTeachers(sectionCourseId),
+      this.getAllowedStudentIds(userId),
+      this.enrollmentRepo.find({
+        where: {
+          section: { id: sectionCourse.section.id },
+          academicYear: { id: sectionCourse.academicYear?.id },
+        },
+        relations: ['student', 'student.person'],
+        order: { orderNumber: 'ASC' },
+      }),
+    ]);
+
+    const visibleEnrollments = allowedStudentIds === null
+      ? enrollments
+      : enrollments.filter((item) => allowedStudentIds.includes(item.student?.id));
+
+    return {
+      teachers,
+      students: visibleEnrollments.map((enrollment) => ({
+        id: enrollment.student?.id,
+        name: enrollment.student?.person
+          ? `${enrollment.student.person.firstName} ${enrollment.student.person.lastName}`
+          : enrollment.student?.studentCode ?? 'Estudiante',
+        code: enrollment.student?.studentCode ?? '',
+      })),
+    };
+  }
+
+  async getTasks(sectionCourseId: string, userId?: string) {
     const assignments = await this.assignmentRepo.find({
       where: { sectionCourse: { id: sectionCourseId } },
       order: { dueDate: 'ASC' },
     });
 
-    return assignments.map((assignment) => ({
-      id: assignment.id,
-      title: assignment.title,
-      date: assignment.dueDate,
-      status: assignment.status === 'closed' ? 'graded' : 'pending',
-      points: assignment.maxScore,
-    }));
+    const [allowedStudentIds, user] = await Promise.all([
+      this.getAllowedStudentIds(userId),
+      userId
+        ? this.userRepo.findOne({ where: { id: userId }, relations: ['role'] })
+        : Promise.resolve(null),
+    ]);
+
+    const submissions = assignments.length
+      ? await this.assignmentSubmissionRepo.find({
+          where: { assigment: { id: In(assignments.map((item) => item.id)) } },
+          relations: ['assigment', 'enrollment', 'enrollment.student', 'enrollment.student.person'],
+          order: { submissionDate: 'DESC', attemptNumber: 'DESC' },
+        })
+      : [];
+
+    const roleName = String(user?.role?.name ?? '').toLowerCase();
+    const canViewAllStudents =
+      allowedStudentIds === null &&
+      (roleName.includes('admin') ||
+        roleName.includes('director') ||
+        roleName.includes('docente') ||
+        roleName.includes('teacher'));
+
+    return assignments.map((assignment) => {
+      const relatedSubmissions = submissions.filter((item) => item.assigment?.id === assignment.id);
+      const visibleSubmissions = allowedStudentIds === null
+        ? relatedSubmissions
+        : relatedSubmissions.filter((item) => allowedStudentIds.includes(item.enrollment?.student?.id));
+
+      const latestByStudent = new Map<string, AssigmentSubmissionEntity>();
+      for (const submission of visibleSubmissions) {
+        const studentId = submission.enrollment?.student?.id;
+        if (!studentId || latestByStudent.has(studentId)) continue;
+        latestByStudent.set(studentId, submission);
+      }
+
+      const studentSubmissions = Array.from(latestByStudent.values()).map((submission) => ({
+        studentId: submission.enrollment?.student?.id,
+        studentName: submission.enrollment?.student?.person
+          ? `${submission.enrollment.student.person.firstName} ${submission.enrollment.student.person.lastName}`
+          : submission.enrollment?.student?.studentCode ?? 'Estudiante',
+        status: this.mapSubmissionStatus(submission.status),
+        score: submission.status === AssigmentSubmissionStatus.GRADED ? Number(submission.score) : undefined,
+        submittedAt: submission.submissionDate,
+        feedback: submission.feedback,
+      }));
+
+      const gradedCount = studentSubmissions.filter((item) => item.status === 'graded').length;
+      const deliveredCount = studentSubmissions.filter((item) => item.status === 'delivered' || item.status === 'late').length;
+      const totalTracked = canViewAllStudents
+        ? studentSubmissions.length
+        : (allowedStudentIds?.length ?? studentSubmissions.length);
+      const pendingCount = Math.max(totalTracked - studentSubmissions.length, 0);
+
+      if (!canViewAllStudents && allowedStudentIds !== null) {
+        const ownSubmission = studentSubmissions[0];
+        return {
+          id: assignment.id,
+          title: assignment.title,
+          date: assignment.dueDate,
+          status: ownSubmission?.status ?? 'pending',
+          points: assignment.maxScore,
+          grade: ownSubmission?.score,
+          studentSubmissions,
+          submissionSummary: {
+            deliveredCount,
+            gradedCount,
+            pendingCount,
+          },
+        };
+      }
+
+      return {
+        id: assignment.id,
+        title: assignment.title,
+        date: assignment.dueDate,
+        status: gradedCount > 0 && pendingCount === 0 ? 'graded' : deliveredCount > 0 || gradedCount > 0 ? 'delivered' : 'pending',
+        points: assignment.maxScore,
+        studentSubmissions,
+        submissionSummary: {
+          deliveredCount,
+          gradedCount,
+          pendingCount,
+        },
+      };
+    });
   }
 
   async getGrades(sectionCourseId: string, userId?: string) {
@@ -333,6 +463,30 @@ export class ClassroomService {
     }
 
     return [];
+  }
+
+  private async canPublishInClassroom(userId?: string) {
+    if (!userId) return false;
+
+    const user = await this.userRepo.findOne({
+      where: { id: userId },
+      relations: ['role'],
+    });
+
+    const roleName = String(user?.role?.name ?? '').toLowerCase();
+
+    return (
+      roleName.includes('admin') ||
+      roleName.includes('director') ||
+      roleName.includes('docente') ||
+      roleName.includes('teacher')
+    );
+  }
+
+  private mapSubmissionStatus(status: AssigmentSubmissionStatus) {
+    if (status === AssigmentSubmissionStatus.GRADED) return 'graded';
+    if (status === AssigmentSubmissionStatus.LATE) return 'late';
+    return 'delivered';
   }
 
   private async ensureChatRoom(sectionCourseId: string) {

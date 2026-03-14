@@ -19,6 +19,7 @@ export class AssigmentSubmissionsService {
       const entityData = {
         ...dto,
         assigment: { id: dto.assigment },
+        enrollment: dto.enrollment ? { id: dto.enrollment } : undefined,
       };
       const assigmentSubmission = this.repo.create(entityData);
       await this.repo.save(assigmentSubmission);
@@ -30,7 +31,10 @@ export class AssigmentSubmissionsService {
 
   async findAll(filter: any) {
     try {
-      const assigmentSubmissions = await this.repo.find({ where: filter });
+      const assigmentSubmissions = await this.repo.find({
+        where: filter,
+        relations: ['assigment', 'enrollment', 'enrollment.student', 'enrollment.student.person'],
+      });
       return { message: 'Lista de envíos de asignación', data: assigmentSubmissions };
     } catch (error) {
       throw new ErrorHandler('Ocurrió un error al obtener los assigmentSubmissions', 500);
@@ -39,7 +43,10 @@ export class AssigmentSubmissionsService {
 
   async findOne(id: string) {
     try {
-      const assigmentSubmission = await this.repo.findOne({ where: { id } });
+      const assigmentSubmission = await this.repo.findOne({
+        where: { id },
+        relations: ['assigment', 'enrollment', 'enrollment.student', 'enrollment.student.person'],
+      });
       if (!assigmentSubmission) {
         throw new ErrorHandler('No se encontró el assigmentSubmission', 404);
       }
@@ -58,6 +65,7 @@ export class AssigmentSubmissionsService {
       this.repo.merge(assigmentSubmission, {
         ...dto,
         assigment: dto.assigment ? { id: dto.assigment } : undefined,
+        enrollment: dto.enrollment ? { id: dto.enrollment } : undefined,
       });
       await this.repo.save(assigmentSubmission);
       return {

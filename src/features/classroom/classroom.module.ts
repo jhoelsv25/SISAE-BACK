@@ -1,10 +1,12 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AssigmentEntity } from '../assigments/entities/assigment.entity';
+import { AssigmentSubmissionEntity } from '../assigment_submissions/entities/assigment_submission.entity';
 import { AssessmentScoreEntity } from '../assessment_scores/entities/assessment_score.entity';
 import { AssessmentEntity } from '../assessments/entities/assessment.entity';
 import { ChatMessageEntity } from '../chat_messages/entities/chat_message.entity';
 import { ChatRoomEntity } from '../chat_rooms/entities/chat_room.entity';
+import { EnrollmentEntity } from '../enrollments/entities/enrollment.entity';
 import { GuardianEntity } from '../guardians/entities/guardian.entity';
 import { LearningMaterialEntity } from '../learning_materials/entities/learning_material.entity';
 import { StudentGuardianEntity } from '../student_guardians/entities/student_guardian.entity';
@@ -25,10 +27,12 @@ import { ClassroomPostEntity } from './entities/classroom-post.entity';
       ClassroomCommentEntity,
       LearningMaterialEntity,
       AssigmentEntity,
+      AssigmentSubmissionEntity,
       AssessmentEntity,
       AssessmentScoreEntity,
       ChatMessageEntity,
       ChatRoomEntity,
+      EnrollmentEntity,
       GuardianEntity,
       StudentEntity,
       StudentGuardianEntity,

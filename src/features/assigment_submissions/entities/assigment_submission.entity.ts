@@ -1,4 +1,5 @@
 import { BaseEntity } from '@common/entities/base.entity';
+import { EnrollmentEntity } from '@features/enrollments/entities/enrollment.entity';
 import { AssigmentSubmissionStatus } from '@features/assigment_submissions/enums/assigment_submission.enum';
 import { AssigmentEntity } from '@features/assigments/entities/assigment.entity';
 import { Column, Entity, ManyToOne } from 'typeorm';
@@ -46,4 +47,7 @@ export class AssigmentSubmissionEntity extends BaseEntity {
 
   @ManyToOne(() => AssigmentEntity)
   assigment: AssigmentEntity;
+
+  @ManyToOne(() => EnrollmentEntity, { nullable: true })
+  enrollment: EnrollmentEntity | null;
 }

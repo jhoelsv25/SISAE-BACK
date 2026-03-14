@@ -113,4 +113,13 @@ export class CreateAssigmentSubmissionDto {
   })
   @IsUUID('4', { message: 'La asignación debe ser un UUID válido.' })
   assigment: string;
+
+  @ApiProperty({
+    example: 'f6f8f6e5-1234-4c87-91dc-221234abcd90',
+    description: 'ID de la matrícula del estudiante (UUID)',
+    required: false,
+  })
+  @IsOptional()
+  @IsUUID('4', { message: 'La matrícula debe ser un UUID válido.' })
+  enrollment?: string;
 }
