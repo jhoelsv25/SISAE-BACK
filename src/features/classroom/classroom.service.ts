@@ -269,6 +269,11 @@ export class ClassroomService {
   }
 
   async getTasks(sectionCourseId: string, userId?: string) {
+    const sectionCourse = await this.sectionCourseRepo.findOne({
+      where: { id: sectionCourseId },
+      relations: ['section', 'academicYear'],
+    });
+
     const assignments = await this.assignmentRepo.find({
       where: { sectionCourse: { id: sectionCourseId } },
       order: { dueDate: 'ASC' },
@@ -280,6 +285,15 @@ export class ClassroomService {
         ? this.userRepo.findOne({ where: { id: userId }, relations: ['role'] })
         : Promise.resolve(null),
     ]);
+
+    const totalStudentsCount = sectionCourse?.section?.id && sectionCourse?.academicYear?.id
+      ? await this.enrollmentRepo.count({
+          where: {
+            section: { id: sectionCourse.section.id },
+            academicYear: { id: sectionCourse.academicYear.id },
+          },
+        })
+      : 0;
 
     const submissions = assignments.length
       ? await this.assignmentSubmissionRepo.find({
@@ -324,11 +338,11 @@ export class ClassroomService {
       const gradedCount = studentSubmissions.filter((item) => item.status === 'graded').length;
       const deliveredCount = studentSubmissions.filter((item) => item.status === 'delivered' || item.status === 'late').length;
       const totalTracked = canViewAllStudents
-        ? studentSubmissions.length
+        ? totalStudentsCount
         : (allowedStudentIds?.length ?? studentSubmissions.length);
       const pendingCount = Math.max(totalTracked - studentSubmissions.length, 0);
 
-      if (!canViewAllStudents && allowedStudentIds !== null) {
+      if (!canViewAllStudents && allowedStudentIds !== null && allowedStudentIds.length <= 1) {
         const ownSubmission = studentSubmissions[0];
         return {
           id: assignment.id,
