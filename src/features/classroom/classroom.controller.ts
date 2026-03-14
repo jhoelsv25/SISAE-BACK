@@ -1,5 +1,5 @@
 import { JwtAuthGuard } from '@auth/guards/jwt-auth.guard';
-import { Body, Controller, Get, Param, Post, Request, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, Request, UseGuards } from '@nestjs/common';
 import { ClassroomService } from './classroom.service';
 
 @Controller('classroom')
@@ -32,6 +32,45 @@ export class ClassroomController {
   @Get(':sectionCourseId/tasks')
   getTasks(@Request() req: any, @Param('sectionCourseId') sectionId: string) {
     return this.classroomService.getTasks(sectionId, req.user?.id);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post(':sectionCourseId/tasks/:assignmentId/submit')
+  submitTask(
+    @Request() req: any,
+    @Param('sectionCourseId') sectionId: string,
+    @Param('assignmentId') assignmentId: string,
+    @Body()
+    body: {
+      submissionText?: string;
+      fileUrl?: string;
+      fileName?: string;
+      linkUrl?: string;
+    },
+  ) {
+    return this.classroomService.submitTask(req.user?.id, sectionId, assignmentId, body);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Patch(':sectionCourseId/tasks/:assignmentId/submissions/:submissionId/review')
+  reviewTaskSubmission(
+    @Request() req: any,
+    @Param('sectionCourseId') sectionId: string,
+    @Param('assignmentId') assignmentId: string,
+    @Param('submissionId') submissionId: string,
+    @Body()
+    body: {
+      score: number;
+      feedback?: string;
+    },
+  ) {
+    return this.classroomService.reviewTaskSubmission(
+      req.user?.id,
+      sectionId,
+      assignmentId,
+      submissionId,
+      body,
+    );
   }
 
   @UseGuards(JwtAuthGuard)

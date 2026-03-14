@@ -325,6 +325,7 @@ export class ClassroomService {
       }
 
       const studentSubmissions = Array.from(latestByStudent.values()).map((submission) => ({
+        submissionId: submission.id,
         studentId: submission.enrollment?.student?.id,
         studentName: submission.enrollment?.student?.person
           ? `${submission.enrollment.student.person.firstName} ${submission.enrollment.student.person.lastName}`
@@ -374,6 +375,126 @@ export class ClassroomService {
         },
       };
     });
+  }
+
+  async submitTask(
+    userId: string | undefined,
+    sectionCourseId: string,
+    assignmentId: string,
+    body: {
+      submissionText?: string;
+      fileUrl?: string;
+      fileName?: string;
+      linkUrl?: string;
+    },
+  ) {
+    const canSubmit = await this.canSubmitTask(userId);
+    if (!canSubmit) {
+      throw new ErrorHandler('No tienes permisos para entregar tareas', 403);
+    }
+
+    const enrollment = await this.getCurrentStudentEnrollment(userId, sectionCourseId);
+    if (!enrollment) {
+      throw new ErrorHandler('No se encontro una matricula activa para este curso', 404);
+    }
+
+    const assignment = await this.assignmentRepo.findOne({
+      where: { id: assignmentId, sectionCourse: { id: sectionCourseId } },
+    });
+
+    if (!assignment) {
+      throw new ErrorHandler('Tarea no encontrada para este curso', 404);
+    }
+
+    const latestSubmission = await this.assignmentSubmissionRepo.findOne({
+      where: {
+        assigment: { id: assignmentId },
+        enrollment: { id: enrollment.id },
+      },
+      order: { submissionDate: 'DESC', attemptNumber: 'DESC' },
+    });
+
+    const now = new Date();
+    const isLate = assignment.dueDate ? new Date(assignment.dueDate).getTime() < now.getTime() : false;
+    const nextAttempt = (latestSubmission?.attemptNumber ?? 0) + 1;
+
+    const entity = latestSubmission
+      ? this.assignmentSubmissionRepo.merge(latestSubmission, {
+          submissionText: body.submissionText ?? latestSubmission.submissionText ?? '',
+          fileUrl: body.fileUrl ?? latestSubmission.fileUrl ?? '',
+          fileName: body.fileName ?? latestSubmission.fileName ?? '',
+          linkUrl: body.linkUrl ?? latestSubmission.linkUrl ?? '',
+          submissionDate: now,
+          attemptNumber: nextAttempt,
+          status: isLate ? AssigmentSubmissionStatus.LATE : AssigmentSubmissionStatus.PENDING,
+        })
+      : this.assignmentSubmissionRepo.create({
+          attemptNumber: 1,
+          submissionDate: now,
+          submissionText: body.submissionText ?? '',
+          fileUrl: body.fileUrl ?? '',
+          fileName: body.fileName ?? '',
+          linkUrl: body.linkUrl ?? '',
+          score: 0,
+          feedback: '',
+          feedbackDate: null as any,
+          feedbackFileUrl: '',
+          gradedBy: '',
+          gradedAt: null as any,
+          status: isLate ? AssigmentSubmissionStatus.LATE : AssigmentSubmissionStatus.PENDING,
+          assigment: { id: assignmentId },
+          enrollment: { id: enrollment.id },
+        });
+
+    const saved = await this.assignmentSubmissionRepo.save(entity);
+    return {
+      id: saved.id,
+      status: this.mapSubmissionStatus(saved.status),
+      submittedAt: saved.submissionDate,
+    };
+  }
+
+  async reviewTaskSubmission(
+    userId: string | undefined,
+    sectionCourseId: string,
+    assignmentId: string,
+    submissionId: string,
+    body: {
+      score: number;
+      feedback?: string;
+    },
+  ) {
+    const canReview = await this.canReviewTask(userId);
+    if (!canReview) {
+      throw new ErrorHandler('No tienes permisos para calificar entregas', 403);
+    }
+
+    const submission = await this.assignmentSubmissionRepo.findOne({
+      where: {
+        id: submissionId,
+        assigment: { id: assignmentId, sectionCourse: { id: sectionCourseId } },
+      },
+      relations: ['assigment'],
+    });
+
+    if (!submission) {
+      throw new ErrorHandler('Entrega no encontrada', 404);
+    }
+
+    submission.score = Number(body.score ?? 0);
+    submission.feedback = body.feedback ?? '';
+    submission.feedbackDate = new Date() as any;
+    submission.gradedAt = new Date() as any;
+    submission.gradedBy = userId ?? '';
+    submission.status = AssigmentSubmissionStatus.GRADED;
+
+    const saved = await this.assignmentSubmissionRepo.save(submission);
+    return {
+      id: saved.id,
+      score: saved.score,
+      feedback: saved.feedback,
+      status: this.mapSubmissionStatus(saved.status),
+    };
   }
 
   async getGrades(sectionCourseId: string, userId?: string) {
@@ -495,6 +616,70 @@ export class ClassroomService {
       roleName.includes('docente') ||
       roleName.includes('teacher')
     );
+  }
+
+  private async canSubmitTask(userId?: string) {
+    if (!userId) return false;
+
+    const user = await this.userRepo.findOne({
+      where: { id: userId },
+      relations: ['role'],
+    });
+
+    const roleName = String(user?.role?.name ?? '').toLowerCase();
+    return roleName.includes('alumno') || roleName.includes('student');
+  }
+
+  private async canReviewTask(userId?: string) {
+    if (!userId) return false;
+
+    const user = await this.userRepo.findOne({
+      where: { id: userId },
+      relations: ['role'],
+    });
+
+    const roleName = String(user?.role?.name ?? '').toLowerCase();
+    return (
+      roleName.includes('admin') ||
+      roleName.includes('director') ||
+      roleName.includes('docente') ||
+      roleName.includes('teacher')
+    );
+  }
+
+  private async getCurrentStudentEnrollment(userId: string | undefined, sectionCourseId: string) {
+    if (!userId) return null;
+
+    const user = await this.userRepo.findOne({
+      where: { id: userId },
+      relations: ['person'],
+    });
+
+    const sectionCourse = await this.sectionCourseRepo.findOne({
+      where: { id: sectionCourseId },
+      relations: ['section', 'academicYear'],
+    });
+
+    if (!user?.person?.id || !sectionCourse?.section?.id || !sectionCourse?.academicYear?.id) {
+      return null;
+    }
+
+    const student = await this.studentRepo.findOne({
+      where: { person: { id: user.person.id } },
+    });
+
+    if (!student) {
+      return null;
+    }
+
+    return this.enrollmentRepo.findOne({
+      where: {
+        student: { id: student.id },
+        section: { id: sectionCourse.section.id },
+        academicYear: { id: sectionCourse.academicYear.id },
+      },
+      relations: ['student', 'student.person'],
+    });
   }
 
   private mapSubmissionStatus(status: AssigmentSubmissionStatus) {
