@@ -4,7 +4,7 @@ import { Column, Entity, ManyToOne } from 'typeorm';
 
 @Entity({ name: 'sessions' })
 export class SessionEntity extends BaseEntity {
-  @Column({ type: 'varchar', length: 255, unique: true })
+  @Column({ type: 'text', unique: true })
   sessionToken: string;
 
   @Column({ type: 'timestamp' })
