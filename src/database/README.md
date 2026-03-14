@@ -61,12 +61,18 @@ npm run migration:show
 npm run db:procedures
 ```
 
-### 4. Seeds (Datos Iniciales)
+### 4. Seeds (Datos Iniciales / Mock)
 
 ```bash
-# Ejecutar todos los seeds
+# Ejecutar todos los seeds (roles, módulos, permisos, docentes, usuarios, demo académica + datos mock)
 npm run seed
+
+# Solo datos mock (anuncios, evaluaciones, tareas, notificaciones, módulos de aprendizaje)
+# Útil cuando ya tienes data académica
+npm run seed:mock
 ```
+
+Los seeds de datos mock incluyen: anuncios, evaluaciones, tareas (assignments), notificaciones y módulos de aprendizaje, para ver el sistema poblado.
 
 ### 5. Reset Completo
 
@@ -159,7 +165,8 @@ npm run start:dev
 ### Procedimientos y Seeds
 
 - `db:procedures` - Aplicar procedimientos SQL
-- `seed` - Ejecutar seeds
+- `seed` - Ejecutar todos los seeds (base + demo académica + mock)
+- `seed:mock` - Solo seeds de datos mock (anuncios, evaluaciones, tareas, notificaciones, módulos)
 
 ## 📝 Convenciones
 

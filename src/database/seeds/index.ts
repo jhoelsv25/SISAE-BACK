@@ -6,29 +6,41 @@ import { seedTeacherAttendances } from './teacher-attendances-seed';
 import { seedTeachers } from './teachers-seed';
 import { seedDemoAcademic } from './demo-academic-seed';
 import { seedUsers } from './users-seed';
+import { seedAnnouncements } from './announcements-seed';
+import { seedLearningModules } from './learning-modules-seed';
+import { seedAssessments } from './assessments-seed';
+import { seedAssigments } from './assigments-seed';
+import { seedNotifications } from './notifications-seed';
+import { seedDemoAcademicLarge } from './demo-academic-large-seed';
 
 export async function runSeeds(dataSource: DataSource) {
   try {
-    // Crear roles básicos
+    // 1. Roles básicos
     await seedRoles(dataSource);
 
-    // Crear módulos de menú
+    // 2. Módulos de menú y permisos
     await seedMenuModules(dataSource);
-
-    // Asignar todos los permisos al super admin
     await seedAdminPermissions(dataSource);
 
-    // Seed de docentes base
+    // 3. Docentes y asistencias
     await seedTeachers(dataSource);
-
-    // Seed de asistencias docentes (demo)
     await seedTeacherAttendances(dataSource);
 
-    // Seed de usuarios base (superadmin/admin)
+    // 4. Usuarios (superadmin/admin)
     await seedUsers(dataSource);
 
-    // Seed demo académica (2 registros por tabla principal)
+    // 5. Demo académica (instituciones, años, periodos, grados, cursos, secciones, estudiantes, matrículas, notas, pagos)
     await seedDemoAcademic(dataSource);
+
+    // 6. Demo académica LARGE (~100 colegios, cursos, secciones, estudiantes, notas, etc.)
+    await seedDemoAcademicLarge(dataSource);
+
+    // 7. Datos mock para ver el sistema completo
+    await seedLearningModules(dataSource);
+    await seedAssessments(dataSource);
+    await seedAssigments(dataSource);
+    await seedAnnouncements(dataSource);
+    await seedNotifications(dataSource);
 
     console.log('✅ All seeds completed successfully');
   } catch (error) {
