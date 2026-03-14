@@ -22,6 +22,7 @@ import { ForumsModule } from './forums/forums.module';
 import { GradeLevelModule } from './grade_level/grade_level.module';
 import { GradesModule } from './grades/grades.module';
 import { GuardiansModule } from './guardians/guardians.module';
+import { DashboardModule } from './dashboard/dashboard.module';
 import { InstitutionModule } from './institution/institution.module';
 import { LearningMaterialsModule } from './learning_materials/learning_materials.module';
 import { LearningModulesModule } from './learning_modules/learning_modules.module';
@@ -91,6 +92,7 @@ import { VirtualClassroomsModule } from './virtual_classrooms/virtual_classrooms
     GradeLevelModule,
     SubjectAreaModule,
     ClassroomModule,
+    DashboardModule,
   ],
   controllers: [],
   providers: [],

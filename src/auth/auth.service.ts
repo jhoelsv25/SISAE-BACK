@@ -388,11 +388,15 @@ export class AuthService {
   }
 
   private mapRoleType(roleKey: string) {
+    if (roleKey.includes('super') && roleKey.includes('admin')) return 'superadmin';
+    if (roleKey.includes('subdirector')) return 'subdirector';
     if (roleKey.includes('admin')) return 'admin';
     if (roleKey.includes('director')) return 'director';
+    if (roleKey.includes('ugel')) return 'ugel';
     if (roleKey.includes('docente') || roleKey.includes('teacher')) return 'teacher';
     if (roleKey.includes('alumno') || roleKey.includes('student')) return 'student';
-    if (roleKey.includes('apoderado') || roleKey.includes('guardian')) return 'guardian';
+    if (roleKey.includes('apoderado') || roleKey.includes('guardian') || roleKey.includes('tutor')) return 'guardian';
+    if (roleKey.includes('invitado') || roleKey.includes('guest') || roleKey.includes('libre')) return 'guest';
     return 'user';
   }
 }
