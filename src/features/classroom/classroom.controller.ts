@@ -16,10 +16,33 @@ export class ClassroomController {
     return this.classroomService.getChatHistory(sectionId);
   }
 
+  @Get(':sectionCourseId/teachers')
+  getTeachers(@Param('sectionCourseId') sectionId: string) {
+    return this.classroomService.getTeachers(sectionId);
+  }
+
+  @Get(':sectionCourseId/tasks')
+  getTasks(@Param('sectionCourseId') sectionId: string) {
+    return this.classroomService.getTasks(sectionId);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get(':sectionCourseId/grades')
+  getGrades(@Request() req: any, @Param('sectionCourseId') sectionId: string) {
+    return this.classroomService.getGrades(sectionId, req.user?.id);
+  }
+
   @UseGuards(JwtAuthGuard)
   @Post('publish')
   publish(@Request() req: any, @Body() body: { sectionCourseId: string; content: string; attachmentUrl?: string }) {
     const userId = req.user.id;
     return this.classroomService.publishPost(userId, body.sectionCourseId, body.content, body.attachmentUrl);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('chat/:sectionCourseId')
+  sendChatMessage(@Request() req: any, @Param('sectionCourseId') sectionId: string, @Body() body: { content: string }) {
+    const userId = req.user.id;
+    return this.classroomService.sendChatMessage(userId, sectionId, body.content);
   }
 }

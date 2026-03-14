@@ -1,29 +1,51 @@
-import { Logger } from '@nestjs/common';
+import { Logger, UnauthorizedException } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
 import {
-    ConnectedSocket,
-    MessageBody,
-    OnGatewayConnection,
-    OnGatewayDisconnect,
-    SubscribeMessage,
-    WebSocketGateway,
-    WebSocketServer,
+  ConnectedSocket,
+  MessageBody,
+  OnGatewayConnection,
+  OnGatewayDisconnect,
+  OnGatewayInit,
+  SubscribeMessage,
+  WebSocketGateway,
+  WebSocketServer,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 import { ClassroomService } from './classroom.service';
 
 @WebSocketGateway({
-  cors: {
-    origin: '*',
-  },
+  cors: { origin: '*' },
   namespace: 'classroom',
 })
-export class ClassroomGateway implements OnGatewayConnection, OnGatewayDisconnect {
+export class ClassroomGateway implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer()
   server: Server;
 
-  private logger: Logger = new Logger('ClassroomGateway');
+  private readonly logger = new Logger(ClassroomGateway.name);
 
-  constructor(private readonly classroomService: ClassroomService) {}
+  constructor(
+    private readonly classroomService: ClassroomService,
+    private readonly jwtService: JwtService,
+  ) {}
+
+  afterInit(server: Server) {
+    server.use((socket, next) => {
+      try {
+        const token =
+          socket.handshake.auth?.token || socket.handshake.headers?.authorization?.split(' ')[1];
+
+        if (!token) {
+          return next(new UnauthorizedException('Missing token'));
+        }
+
+        const payload = this.jwtService.verify(token);
+        socket.data.user = payload;
+        next();
+      } catch {
+        next(new UnauthorizedException('Invalid token'));
+      }
+    });
+  }
 
   handleConnection(client: Socket) {
     this.logger.log(`Client connected: ${client.id}`);
@@ -34,7 +56,7 @@ export class ClassroomGateway implements OnGatewayConnection, OnGatewayDisconnec
   }
 
   @SubscribeMessage('joinRoom')
-  handleJoinRoom(client: Socket, room: string) {
+  handleJoinRoom(@ConnectedSocket() client: Socket, @MessageBody() room: string) {
     client.join(room);
     this.logger.log(`Client ${client.id} joined room: ${room}`);
   }
@@ -42,22 +64,36 @@ export class ClassroomGateway implements OnGatewayConnection, OnGatewayDisconnec
   @SubscribeMessage('sendMessage')
   async handleMessage(
     @ConnectedSocket() client: Socket,
-    @MessageBody() data: { room: string; userId: string; message: any },
+    @MessageBody() data: { room: string; message: { content: string } },
   ) {
-    // Save to DB
-    if (data.userId && data.message?.content) {
-      await this.classroomService.saveMessage(data.userId, data.room, data.message.content);
+    const userId = client.data.user?.sub;
+    if (!userId || !data.room || !data.message?.content?.trim()) {
+      throw new UnauthorizedException('Invalid message payload');
     }
-    
-    // Broadcast
-    this.server.to(data.room).emit('newMessage', data.message);
+
+    const saved = await this.classroomService.sendChatMessage(userId, data.room, data.message.content.trim());
+    this.server.to(data.room).emit('newMessage', saved);
+    return saved;
   }
 
   @SubscribeMessage('newPost')
-  handleNewPost(
+  async handleNewPost(
     @ConnectedSocket() client: Socket,
-    @MessageBody() data: { room: string; post: any },
+    @MessageBody() data: { room: string; post: { content: string; attachmentUrl?: string } },
   ) {
-    this.server.to(data.room).emit('feedUpdate', data.post);
+    const userId = client.data.user?.sub;
+    if (!userId || !data.room || (!data.post?.content?.trim() && !data.post?.attachmentUrl)) {
+      throw new UnauthorizedException('Invalid post payload');
+    }
+
+    const created = await this.classroomService.publishPost(
+      userId,
+      data.room,
+      data.post.content?.trim() ?? '',
+      data.post.attachmentUrl,
+    );
+    const feedItem = await this.classroomService.getFeedItemByPostId(created.id);
+    this.server.to(data.room).emit('feedUpdate', feedItem);
+    return feedItem;
   }
 }
