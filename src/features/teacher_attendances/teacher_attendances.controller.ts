@@ -41,4 +41,9 @@ export class TeacherAttendancesController {
   registerBulk(@Body() data: any) {
     return this.teacherAttendancesService.registerBulk(data);
   }
+
+  @Post('sync-biometric')
+  syncBiometric(@Body() body: { date?: string }) {
+    return this.teacherAttendancesService.syncFromBiometric(body?.date ?? '');
+  }
 }

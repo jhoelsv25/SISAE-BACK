@@ -28,7 +28,7 @@ export class BiometricDevice1781000000000 implements MigrationInterface {
     `);
 
     await queryRunner.query(`
-      CREATE TABLE "biometric_device_configs" (
+      CREATE TABLE "biometric" (
         "id" uuid NOT NULL DEFAULT uuid_generate_v4(),
         "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
         "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
@@ -38,13 +38,13 @@ export class BiometricDevice1781000000000 implements MigrationInterface {
         "timeout" integer NOT NULL DEFAULT 5000,
         "inport" integer NOT NULL DEFAULT 5200,
         "is_active" boolean NOT NULL DEFAULT true,
-        CONSTRAINT "PK_biometric_device_configs" PRIMARY KEY ("id")
+        CONSTRAINT "PK_biometric" PRIMARY KEY ("id")
       )
     `);
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
-    await queryRunner.query(`DROP TABLE "biometric_device_configs"`);
+    await queryRunner.query(`DROP TABLE "biometric"`);
     await queryRunner.query(`DROP TABLE "device_users"`);
     await queryRunner.query(`DROP TABLE "device_attendance_logs"`);
   }

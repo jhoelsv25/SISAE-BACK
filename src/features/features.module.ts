@@ -9,6 +9,7 @@ import { AssigmentsModule } from './assigments/assigments.module';
 import { AttendancesModule } from './attendances/attendances.module';
 import { AttendanceDeviceModule } from './attendance_device/attendance-device.module';
 import { BehaviorRecordsModule } from './behavior_records/behavior_records.module';
+import { BiometricModule } from './biometric/biometric.module';
 import { ChatMessagesModule } from './chat_messages/chat_messages.module';
 import { ChatParticipantsModule } from './chat_participants/chat_participants.module';
 import { ChatRoomsModule } from './chat_rooms/chat_rooms.module';
@@ -76,6 +77,7 @@ import { VirtualClassroomsModule } from './virtual_classrooms/virtual_classrooms
     AssigmentsModule,
     LearningModulesModule,
     BehaviorRecordsModule,
+    BiometricModule,
     StudentObservationsModule,
     GuardiansModule,
     StudentGuardiansModule,

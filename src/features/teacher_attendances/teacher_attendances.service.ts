@@ -5,12 +5,18 @@ import { ErrorHandler } from '../../common/exceptions';
 import { CreateTeacherAttendanceDto } from './dto/create-teacher_attendance.dto';
 import { UpdateTeacherAttendanceDto } from './dto/update-teacher_attendance.dto';
 import { TeacherAttendanceEntity } from './entities/teacher_attendance.entity';
+import { DeviceAttendanceLogEntity } from '../attendance_device/infrastructure/persistence/entities/attendance-log.entity';
+import { ZkAttendanceClient } from '../attendance_device/infrastructure/device/zk-attendance.client';
+import { AttendanceStatus } from './enums/teacher_attendance.enum';
 
 @Injectable()
 export class TeacherAttendancesService {
   constructor(
     @InjectRepository(TeacherAttendanceEntity)
     private readonly repo: Repository<TeacherAttendanceEntity>,
+    @InjectRepository(DeviceAttendanceLogEntity)
+    private readonly deviceLogRepo: Repository<DeviceAttendanceLogEntity>,
+    private readonly zkClient: ZkAttendanceClient,
   ) {}
 
   async create(dto: CreateTeacherAttendanceDto) {
@@ -149,6 +155,91 @@ export class TeacherAttendancesService {
       return results;
     } catch (error: any) {
       throw new ErrorHandler('Error al registrar asistencias masivas de docentes: ' + error.message, 500);
+    }
+  }
+
+  async syncFromBiometric(date: string) {
+    try {
+      const targetDate = date || new Date().toISOString().slice(0, 10);
+
+      const deviceLogs = await this.zkClient.getAttendanceLogs();
+      const filteredLogs = deviceLogs.filter((log) => {
+        const logDate = log.timestamp.toISOString().slice(0, 10);
+        return logDate === targetDate;
+      });
+
+      await this.deviceLogRepo
+        .createQueryBuilder()
+        .delete()
+        .where('timestamp::date = :date', { date: targetDate })
+        .execute();
+
+      if (filteredLogs.length > 0) {
+        await this.deviceLogRepo.save(
+          filteredLogs.map((log) => ({
+            deviceUserId: log.deviceUserId,
+            timestamp: log.timestamp,
+            status: log.status ?? null,
+            punch: log.punch ?? null,
+            deviceIp: log.deviceIp,
+          })),
+        );
+      }
+
+      const firstLogByUser = new Map<string, Date>();
+      filteredLogs.forEach((log) => {
+        const current = firstLogByUser.get(log.deviceUserId);
+        if (!current || log.timestamp < current) {
+          firstLogByUser.set(log.deviceUserId, log.timestamp);
+        }
+      });
+
+      const deviceUserIds = Array.from(firstLogByUser.keys());
+      if (deviceUserIds.length === 0) {
+        return { message: 'Sin registros biométricos para la fecha', processed: 0 };
+      }
+
+      const teachers = await this.repo.manager.query(
+        `SELECT id, teacher_code AS "teacherCode" FROM teachers WHERE teacher_code = ANY($1)`,
+        [deviceUserIds],
+      );
+      const teacherMap = new Map(teachers.map((t: any) => [t.teacherCode, t.id]));
+
+      let processed = 0;
+      for (const [deviceUserId, timestamp] of firstLogByUser.entries()) {
+        const teacherId = teacherMap.get(deviceUserId);
+        if (!teacherId) continue;
+
+        const checkInTime = timestamp.toISOString().slice(11, 19);
+        const existing = await this.repo.findOne({
+          where: { date: targetDate, teacher: { id: teacherId }, vigencia: 1 },
+        });
+
+        if (existing) {
+          this.repo.merge(existing, {
+            status: AttendanceStatus.PRESENT,
+            checkInTime,
+            observations: 'Registro biométrico',
+          });
+          await this.repo.save(existing);
+        } else {
+          const attendance = this.repo.create({
+            date: targetDate,
+            teacher: { id: teacherId },
+            status: AttendanceStatus.PRESENT,
+            observations: 'Registro biométrico',
+            leaveType: 'Biométrico',
+            checkInTime,
+            vigencia: 1,
+          });
+          await this.repo.save(attendance);
+        }
+        processed++;
+      }
+
+      return { message: 'Sincronización biométrica completada', processed };
+    } catch (error: any) {
+      throw new ErrorHandler(`Error al sincronizar con biométrico: ${error.message}`, 500);
     }
   }
 }

@@ -52,6 +52,7 @@ export class CreatePermissionDto {
   })
   @IsOptional()
   @IsString()
-  @IsIn(['system', 'shared'])
+  @Transform(({ value }) => (value === 'global' ? 'shared' : value))
+  @IsIn(['system', 'shared', 'global'])
   scope?: string = 'shared';
 }

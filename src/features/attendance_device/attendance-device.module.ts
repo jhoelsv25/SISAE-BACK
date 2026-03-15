@@ -9,11 +9,11 @@ import { AttendanceLogRepository } from './infrastructure/persistence/repositori
 import { DeviceUserRepository } from './infrastructure/persistence/repositories/device-user.repository';
 import { DeviceAttendanceLogEntity } from './infrastructure/persistence/entities/attendance-log.entity';
 import { DeviceUserEntity } from './infrastructure/persistence/entities/device-user.entity';
-import { BiometricDeviceConfigEntity } from './infrastructure/persistence/entities/biometric-config.entity';
+import { BiometricEntity } from '../biometric/entities/biometric.entity';
 import { BiometricConfigRepository } from './infrastructure/persistence/repositories/biometric-config.repository';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([DeviceAttendanceLogEntity, DeviceUserEntity, BiometricDeviceConfigEntity])],
+  imports: [TypeOrmModule.forFeature([DeviceAttendanceLogEntity, DeviceUserEntity, BiometricEntity])],
   controllers: [AttendanceDeviceController, BiometricConfigController],
   providers: [
     ZkAttendanceClient,
@@ -33,5 +33,6 @@ import { BiometricConfigRepository } from './infrastructure/persistence/reposito
       inject: [ZkAttendanceClient, DeviceUserRepository],
     },
   ],
+  exports: [ZkAttendanceClient],
 })
 export class AttendanceDeviceModule {}

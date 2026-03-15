@@ -1,8 +1,8 @@
 import { Column, Entity } from 'typeorm';
 import { BaseEntity } from '@common/entities/base.entity';
 
-@Entity('biometric_device_configs')
-export class BiometricDeviceConfigEntity extends BaseEntity {
+@Entity('biometric')
+export class BiometricEntity extends BaseEntity {
   @Column()
   ip!: string;
 

@@ -1,9 +1,13 @@
 import { Body, Controller, Get, Put } from '@nestjs/common';
 import { BiometricConfigRepository } from '../infrastructure/persistence/repositories/biometric-config.repository';
+import { ZkAttendanceClient } from '../infrastructure/device/zk-attendance.client';
 
 @Controller('administration/biometric-config')
 export class BiometricConfigController {
-  constructor(private readonly repo: BiometricConfigRepository) {}
+  constructor(
+    private readonly repo: BiometricConfigRepository,
+    private readonly device: ZkAttendanceClient,
+  ) {}
 
   @Get()
   getConfig() {
@@ -28,5 +32,17 @@ export class BiometricConfigController {
       inport: dto.inport ?? 5200,
       isActive: dto.isActive ?? true,
     });
+  }
+
+  @Get('status')
+  async getStatus() {
+    const config = await this.repo.getActive();
+    const connected = await this.device.checkConnection();
+    return {
+      connected,
+      ip: config?.ip ?? null,
+      port: config?.port ?? null,
+      checkedAt: new Date().toISOString(),
+    };
   }
 }

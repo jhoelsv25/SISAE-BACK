@@ -1,7 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { v4 as uuid } from 'uuid';
-import Zkteco from 'zkteco-js';
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const Zkteco = require('zkteco-js');
 import { AttendanceDevicePort } from '../../application/ports/attendance-device.port';
 import { AttendanceLog } from '../../domain/entities/attendance-log.entity';
 import { DeviceUser } from '../../domain/entities/device-user.entity';
@@ -48,8 +49,21 @@ export class ZkAttendanceClient implements AttendanceDevicePort {
     }
   }
 
+  async checkConnection(): Promise<boolean> {
+    try {
+      await this.loadConfig();
+      await this.client.createSocket();
+      await this.client.disconnect();
+      this.connected = false;
+      return true;
+    } catch (error) {
+      this.connected = false;
+      return false;
+    }
+  }
+
   async getUsers(): Promise<DeviceUser[]> {
-    const response = await this.safeFetch(() => this.client.getUsers());
+    const response = (await this.safeFetch(() => this.client.getUsers())) as any;
     const users = response?.data ?? [];
     return users.map((user: any) => new DeviceUser(
       uuid(),
@@ -61,7 +75,7 @@ export class ZkAttendanceClient implements AttendanceDevicePort {
   }
 
   async getAttendanceLogs(): Promise<AttendanceLog[]> {
-    const response = await this.safeFetch(() => this.client.getAttendances());
+    const response = (await this.safeFetch(() => this.client.getAttendances())) as any;
     const logs = response?.data ?? [];
     return logs.map((log: any) => new AttendanceLog(
       uuid(),

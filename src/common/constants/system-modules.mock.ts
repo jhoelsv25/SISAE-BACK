@@ -567,6 +567,14 @@ export const MENU_MODULES_MOCK: MenuItem[] = [
         permissions: ['view_audit_log'],
         visibility: Visibility.PUBLIC,
       },
+      {
+        id: 'biometric',
+        icon: 'fa-fingerprint',
+        label: 'Biométrico',
+        route: '/administration/biometric',
+        permissions: ['manage_institution'],
+        visibility: Visibility.PUBLIC,
+      },
     ],
   },
 ];

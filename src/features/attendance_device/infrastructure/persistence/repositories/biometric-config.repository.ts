@@ -5,13 +5,13 @@ import {
   BiometricConfigRepoPort,
   BiometricDeviceConfig,
 } from '../../../application/ports/biometric-config-repo.port';
-import { BiometricDeviceConfigEntity } from '../entities/biometric-config.entity';
+import { BiometricEntity } from '../../../../biometric/entities/biometric.entity';
 
 @Injectable()
 export class BiometricConfigRepository implements BiometricConfigRepoPort {
   constructor(
-    @InjectRepository(BiometricDeviceConfigEntity)
-    private readonly repo: Repository<BiometricDeviceConfigEntity>,
+    @InjectRepository(BiometricEntity)
+    private readonly repo: Repository<BiometricEntity>,
   ) {}
 
   async getActive(): Promise<BiometricDeviceConfig | null> {
