@@ -7,6 +7,7 @@ import { AssessmentsModule } from './assessments/assessments.module';
 import { AssigmentSubmissionsModule } from './assigment_submissions/assigment_submissions.module';
 import { AssigmentsModule } from './assigments/assigments.module';
 import { AttendancesModule } from './attendances/attendances.module';
+import { AttendanceDeviceModule } from './attendance_device/attendance-device.module';
 import { BehaviorRecordsModule } from './behavior_records/behavior_records.module';
 import { ChatMessagesModule } from './chat_messages/chat_messages.module';
 import { ChatParticipantsModule } from './chat_participants/chat_participants.module';
@@ -63,6 +64,7 @@ import { VirtualClassroomsModule } from './virtual_classrooms/virtual_classrooms
     SessionsModule,
     NotificationsModule,
     AttendancesModule,
+    AttendanceDeviceModule,
     SchedulesModule,
     EnrollmentsModule,
     PaymentsModule,
