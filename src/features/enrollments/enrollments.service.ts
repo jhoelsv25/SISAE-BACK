@@ -31,7 +31,8 @@ export class EnrollmentsService {
   async findAll(filter: any) {
     try {
       const { sectionCourse, ...otherFilters } = filter;
-      const query = this.repo.createQueryBuilder('enrollment')
+      const query = this.repo
+        .createQueryBuilder('enrollment')
         .leftJoinAndSelect('enrollment.student', 'student')
         .leftJoinAndSelect('student.person', 'person')
         .leftJoinAndSelect('enrollment.section', 'section');
@@ -40,15 +41,17 @@ export class EnrollmentsService {
         query.innerJoin(
           SectionCourseEntity,
           'sc',
-          'sc.sectionId = enrollment.sectionId AND sc.id = :scId',
-          { scId: sectionCourse }
+          'sc.section_id = enrollment.section_id AND sc.id = :scId AND sc.deleted_at IS NULL',
+          { scId: sectionCourse },
         );
       }
 
       // Aplicar filtros adicionales de forma segura
       Object.keys(otherFilters).forEach((key, index) => {
         if (otherFilters[key] !== undefined && otherFilters[key] !== null) {
-          query.andWhere(`enrollment.${key} = :val${index}`, { [`val${index}`]: otherFilters[key] });
+          query.andWhere(`enrollment.${key} = :val${index}`, {
+            [`val${index}`]: otherFilters[key],
+          });
         }
       });
 

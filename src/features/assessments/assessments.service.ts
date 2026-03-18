@@ -30,8 +30,18 @@ export class AssessmentsService {
 
   async findAll(filter: any) {
     try {
+      const { sectionCourse, period, ...rest } = filter;
+      const where: Record<string, any> = { ...rest };
+
+      if (sectionCourse) {
+        where['sectionCourse'] = { id: sectionCourse };
+      }
+      if (period) {
+        where['period'] = { id: period };
+      }
+
       const assessments = await this.repo.find({
-        where: filter,
+        where,
         relations: ['period', 'sectionCourse', 'sectionCourse.course', 'sectionCourse.section'],
       });
       return { data: assessments, total: assessments.length };

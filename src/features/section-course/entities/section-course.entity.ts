@@ -25,14 +25,14 @@ export class SectionCourseEntity extends BaseEntity {
   academicYear: AcademicYearEntity;
 
   @ManyToOne(() => SectionEntity)
-  @JoinColumn({ name: 'sectionId' })
+  @JoinColumn({ name: 'section_id' })
   section: SectionEntity;
 
   @ManyToOne(() => CourseEntity)
-  @JoinColumn({ name: 'courseId' })
+  @JoinColumn({ name: 'course_id' })
   course: CourseEntity;
 
   @ManyToOne(() => TeacherEntity, { nullable: true })
-  @JoinColumn({ name: 'teacherId' })
+  @JoinColumn({ name: 'teacher_id' })
   teacher: TeacherEntity;
 }
