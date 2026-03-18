@@ -3,6 +3,7 @@ export const QUEUE = {
   CHAT: 'chat',
   REPORTS: 'reports',
   STUDENTS_IMPORT: 'students_import',
+  USERS_IMPORT: 'users_import',
 } as const;
 
 export const JOBS = {
@@ -10,4 +11,5 @@ export const JOBS = {
   PROCESS_CHAT_MESSAGE: 'process_chat_message',
   GENERATE_REPORT: 'generate_report',
   IMPORT_STUDENTS: 'import_students',
+  IMPORT_USERS: 'import_users',
 } as const;

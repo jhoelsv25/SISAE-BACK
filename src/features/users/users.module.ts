@@ -1,10 +1,18 @@
+import { BullModule } from '@nestjs/bullmq';
+import { ExcelModule } from '@common/excel/excel.module';
+import { PersonEntity } from '@features/persons/entities/person.entity';
+import { RoleEntity } from '@features/roles/entities/role.entity';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { PermissionsGuard } from '../../auth/guards/permissions.guard';
 import { RolesGuard } from '../../auth/guards/roles.guard';
+import { RedisModule } from '../../infrastruture/redis/redis.module';
+import { QUEUE } from '../../infrastruture/queues';
 import { UserEntity } from './entities/user.entity';
 import { UserReadRepository } from './repositories/user-read.repository';
 import { UserWriteRepository } from './repositories/user-write.repository';
+import { UsersImportProcessor } from './users-import.processor';
+import { UsersImportService } from './users-import.service';
 import { UserPasswordService } from './services/user-password.service';
 import { CreateUserUseCase } from './use-cases/create-user.use-case';
 import { DeleteUserUseCase } from './use-cases/delete-user.use-case';
@@ -19,11 +27,18 @@ import { UsersController } from './users.controller';
 import { UsersService } from './users.service';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([UserEntity])],
+  imports: [
+    TypeOrmModule.forFeature([UserEntity, PersonEntity, RoleEntity]),
+    BullModule.registerQueue({ name: QUEUE.USERS_IMPORT }),
+    RedisModule,
+    ExcelModule,
+  ],
   controllers: [UsersController],
   providers: [
     // Main Service
     UsersService,
+    UsersImportService,
+    UsersImportProcessor,
     UserPasswordService,
 
     // Repositories
