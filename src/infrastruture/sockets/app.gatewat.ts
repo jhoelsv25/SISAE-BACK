@@ -9,6 +9,17 @@ import {
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 
+function extractCookieToken(cookieHeader?: string): string | null {
+  if (!cookieHeader) return null;
+  const cookies = Object.fromEntries(
+    cookieHeader.split(';').map(part => {
+      const [key, ...rest] = part.trim().split('=');
+      return [key, rest.join('=')];
+    }),
+  );
+  return cookies['accessToken'] ?? null;
+}
+
 @WebSocketGateway({
   cors: { origin: '*' },
 })
@@ -25,7 +36,9 @@ export class AppGateway implements OnGatewayInit, OnGatewayConnection, OnGateway
     server.use((socket, next) => {
       try {
         const token =
-          socket.handshake.auth?.token || socket.handshake.headers?.authorization?.split(' ')[1];
+          socket.handshake.auth?.token ||
+          socket.handshake.headers?.authorization?.split(' ')[1] ||
+          extractCookieToken(socket.handshake.headers?.cookie as string | undefined);
 
         if (!token) {
           return next(new UnauthorizedException('Missing token'));

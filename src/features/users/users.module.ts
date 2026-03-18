@@ -1,7 +1,10 @@
 import { BullModule } from '@nestjs/bullmq';
 import { ExcelModule } from '@common/excel/excel.module';
+import { InstitutionEntity } from '@features/institution/entities/institution.entity';
 import { PersonEntity } from '@features/persons/entities/person.entity';
 import { RoleEntity } from '@features/roles/entities/role.entity';
+import { StudentEntity } from '@features/students/entities/student.entity';
+import { TeacherEntity } from '@features/teachers/entities/teacher.entity';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { PermissionsGuard } from '../../auth/guards/permissions.guard';
@@ -9,6 +12,7 @@ import { RolesGuard } from '../../auth/guards/roles.guard';
 import { RedisModule } from '../../infrastruture/redis/redis.module';
 import { QUEUE } from '../../infrastruture/queues';
 import { UserEntity } from './entities/user.entity';
+import { UserImportHistoryEntity } from './entities/user-import-history.entity';
 import { UserReadRepository } from './repositories/user-read.repository';
 import { UserWriteRepository } from './repositories/user-write.repository';
 import { UsersImportProcessor } from './users-import.processor';
@@ -28,7 +32,8 @@ import { UsersService } from './users.service';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([UserEntity, PersonEntity, RoleEntity]),
+    TypeOrmModule.forFeature([UserEntity, UserImportHistoryEntity, PersonEntity, RoleEntity]),
+    TypeOrmModule.forFeature([StudentEntity, TeacherEntity, InstitutionEntity]),
     BullModule.registerQueue({ name: QUEUE.USERS_IMPORT }),
     RedisModule,
     ExcelModule,

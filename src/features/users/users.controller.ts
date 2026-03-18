@@ -9,12 +9,13 @@ import {
   Post,
   Query,
   Req,
+  Res,
   UploadedFile,
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { Request } from 'express';
+import { Request, Response } from 'express';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -52,6 +53,26 @@ export class UsersController {
   async importStart(@Body() dto: ImportStartDto, @Req() req: Request) {
     const userId = (req as any).user?.sub ?? (req as any).user?.id;
     return this.usersImportService.startImport(dto, userId);
+  }
+
+  @Get('import/template')
+  @UseGuards(JwtAuthGuard)
+  async importTemplate(@Res() res: Response) {
+    const { buffer, fileName } = this.usersImportService.getTemplate();
+
+    res.setHeader(
+      'Content-Type',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    );
+    res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+    res.send(buffer);
+  }
+
+  @Get('import/history')
+  @UseGuards(JwtAuthGuard)
+  async importHistory(@Req() req: Request) {
+    const userId = (req as any).user?.sub ?? (req as any).user?.id;
+    return this.usersImportService.getHistory(userId);
   }
 
   @Get()
