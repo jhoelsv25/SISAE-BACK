@@ -23,6 +23,11 @@ export class NotificationsController {
     return this.notificationsService.findAll(filter);
   }
 
+  @Get('cursor')
+  findAllCursor(@Query() query: any) {
+    return this.notificationsService.findAllCursor(query);
+  }
+
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.notificationsService.findOne(id);

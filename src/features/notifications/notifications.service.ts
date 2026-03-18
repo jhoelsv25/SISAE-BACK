@@ -39,6 +39,17 @@ export class NotificationsService {
     }
   }
 
+  async findAllCursor(params: any) {
+    try {
+      const result = await this.repo.query('SELECT get_notifications_cursor($1) as result', [
+        JSON.stringify(params),
+      ]);
+      return result[0].result;
+    } catch (error) {
+      throw new ErrorHandler('Ocurrió un error al obtener las notificaciones con cursor', 500);
+    }
+  }
+
   async findOne(id: string) {
     try {
       const notification = await this.repo.findOne({ where: { id } });
