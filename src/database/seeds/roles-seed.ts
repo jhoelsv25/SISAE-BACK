@@ -14,6 +14,18 @@ export async function seedRoles(dataSource: DataSource) {
       description: 'Rol administrativo con permisos elevados',
     },
     {
+      name: 'Director',
+      description: 'Director de la institución educativa',
+    },
+    {
+      name: 'Docente',
+      description: 'Personal docente de la institución',
+    },
+    {
+      name: 'Estudiante',
+      description: 'Estudiante matriculado en la institución',
+    },
+    {
       name: 'User',
       description: 'Rol básico para usuarios estándar',
     },

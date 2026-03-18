@@ -33,7 +33,15 @@ echo "📁 Buscando archivos SQL en $PROCEDURES_DIR..."
 for sql_file in $PROCEDURES_DIR/*.sql; do
     if [ -f "$sql_file" ]; then
         echo "  ⚙️  Ejecutando: $(basename $sql_file)"
-        psql -h $DB_HOST -p $DB_PORT -U $DB_USERNAME -d $DB_NAME -f "$sql_file"
+        
+        # Intentar ejecutar con docker exec si psql no está disponible localmente
+        if command -v psql >/dev/null 2>&1; then
+             psql -h $DB_HOST -p $DB_PORT -U $DB_USERNAME -d $DB_NAME -f "$sql_file"
+        else
+             echo "  🐳 psql no encontrado localmente, intentando vía Docker..."
+             cat "$sql_file" | docker exec -i sisae_postgres_db psql -U $DB_USERNAME -d $DB_NAME
+        fi
+
         if [ $? -eq 0 ]; then
             echo "  ✅ $(basename $sql_file) aplicado correctamente"
         else

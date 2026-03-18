@@ -4,34 +4,69 @@ export class  N1773797174307 implements MigrationInterface {
     name = ' N1773797174307'
 
     public async up(queryRunner: QueryRunner): Promise<void> {
-        await queryRunner.query(`ALTER TABLE "user_preferences" DROP CONSTRAINT "FK_user_preferences_user"`);
-        await queryRunner.query(`ALTER TABLE "assigment_submissions" DROP CONSTRAINT "FK_assigment_submissions_enrollment"`);
-        await queryRunner.query(`ALTER TABLE "assigment_submissions" RENAME COLUMN "enrollmentId" TO "enrollment_id"`);
+        await queryRunner.query(`ALTER TABLE "user_preferences" DROP CONSTRAINT IF EXISTS "FK_user_preferences_user"`);
+        await queryRunner.query(`ALTER TABLE "assigment_submissions" DROP CONSTRAINT IF EXISTS "FK_assigment_submissions_enrollment"`);
+        
+        await queryRunner.query(`
+            DO $$
+            BEGIN
+                IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='assigment_submissions' AND column_name='enrollmentId') THEN
+                    ALTER TABLE "assigment_submissions" RENAME COLUMN "enrollmentId" TO "enrollment_id";
+                END IF;
+            END $$;
+        `);
+
         await queryRunner.query(`ALTER TABLE "persons" ALTER COLUMN "birth_place" DROP NOT NULL`);
-        await queryRunner.query(`ALTER TABLE "persons" DROP CONSTRAINT "UQ_e022ed149591249aa8641e0e282"`);
+        await queryRunner.query(`ALTER TABLE "persons" DROP CONSTRAINT IF EXISTS "UQ_e022ed149591249aa8641e0e282"`);
         await queryRunner.query(`ALTER TABLE "persons" ALTER COLUMN "nationality" DROP NOT NULL`);
-        await queryRunner.query(`ALTER TABLE "persons" DROP CONSTRAINT "UQ_5aa74853d2135e6078ea8d55c05"`);
-        await queryRunner.query(`ALTER TABLE "persons" DROP COLUMN "address"`);
-        await queryRunner.query(`ALTER TABLE "persons" ADD "address" character varying(255)`);
-        await queryRunner.query(`ALTER TABLE "persons" DROP CONSTRAINT "UQ_b17cd2cfac02400e9af4fb45572"`);
-        await queryRunner.query(`ALTER TABLE "persons" DROP COLUMN "district"`);
-        await queryRunner.query(`ALTER TABLE "persons" ADD "district" character varying(100)`);
-        await queryRunner.query(`ALTER TABLE "persons" DROP CONSTRAINT "UQ_161e950cfa90bf1aecdc8e34db1"`);
-        await queryRunner.query(`ALTER TABLE "persons" DROP COLUMN "province"`);
-        await queryRunner.query(`ALTER TABLE "persons" ADD "province" character varying(100)`);
-        await queryRunner.query(`ALTER TABLE "persons" DROP CONSTRAINT "UQ_daf1828c724e693c9cff725c075"`);
-        await queryRunner.query(`ALTER TABLE "persons" DROP COLUMN "department"`);
-        await queryRunner.query(`ALTER TABLE "persons" ADD "department" character varying(100)`);
-        await queryRunner.query(`ALTER TABLE "persons" DROP CONSTRAINT "UQ_6545fa46b808c5870a6b27a3adf"`);
-        await queryRunner.query(`ALTER TABLE "persons" DROP COLUMN "phone"`);
-        await queryRunner.query(`ALTER TABLE "persons" ADD "phone" character varying(20)`);
-        await queryRunner.query(`ALTER TABLE "persons" DROP CONSTRAINT "UQ_68b2f79ca1ccae0180cdd5ff9f6"`);
-        await queryRunner.query(`ALTER TABLE "persons" DROP COLUMN "mobile"`);
-        await queryRunner.query(`ALTER TABLE "persons" ADD "mobile" character varying(20)`);
+        await queryRunner.query(`ALTER TABLE "persons" DROP CONSTRAINT IF EXISTS "UQ_5aa74853d2135e6078ea8d55c05"`);
+        
+        // Ensure column is varying(255)
+        await queryRunner.query(`ALTER TABLE "persons" ALTER COLUMN "address" TYPE character varying(255)`);
+        await queryRunner.query(`ALTER TABLE "persons" ALTER COLUMN "address" DROP NOT NULL`);
+        
+        await queryRunner.query(`ALTER TABLE "persons" DROP CONSTRAINT IF EXISTS "UQ_b17cd2cfac02400e9af4fb45572"`);
+        await queryRunner.query(`ALTER TABLE "persons" ALTER COLUMN "district" TYPE character varying(100)`);
+        await queryRunner.query(`ALTER TABLE "persons" ALTER COLUMN "district" DROP NOT NULL`);
+
+        await queryRunner.query(`ALTER TABLE "persons" DROP CONSTRAINT IF EXISTS "UQ_161e950cfa90bf1aecdc8e34db1"`);
+        await queryRunner.query(`ALTER TABLE "persons" ALTER COLUMN "province" TYPE character varying(100)`);
+        await queryRunner.query(`ALTER TABLE "persons" ALTER COLUMN "province" DROP NOT NULL`);
+
+        await queryRunner.query(`ALTER TABLE "persons" DROP CONSTRAINT IF EXISTS "UQ_daf1828c724e693c9cff725c075"`);
+        await queryRunner.query(`ALTER TABLE "persons" ALTER COLUMN "department" TYPE character varying(100)`);
+        await queryRunner.query(`ALTER TABLE "persons" ALTER COLUMN "department" DROP NOT NULL`);
+
+        await queryRunner.query(`ALTER TABLE "persons" DROP CONSTRAINT IF EXISTS "UQ_6545fa46b808c5870a6b27a3adf"`);
+        await queryRunner.query(`ALTER TABLE "persons" ALTER COLUMN "phone" TYPE character varying(20)`);
+        await queryRunner.query(`ALTER TABLE "persons" ALTER COLUMN "phone" DROP NOT NULL`);
+
+        await queryRunner.query(`ALTER TABLE "persons" DROP CONSTRAINT IF EXISTS "UQ_68b2f79ca1ccae0180cdd5ff9f6"`);
+        await queryRunner.query(`ALTER TABLE "persons" ALTER COLUMN "mobile" TYPE character varying(20)`);
+        await queryRunner.query(`ALTER TABLE "persons" ALTER COLUMN "mobile" DROP NOT NULL`);
+
         await queryRunner.query(`ALTER TABLE "user_preferences" ALTER COLUMN "preferences" SET DEFAULT '{}'::jsonb`);
-        await queryRunner.query(`CREATE UNIQUE INDEX "uq_user_preferences_user" ON "user_preferences" ("user_id") `);
-        await queryRunner.query(`ALTER TABLE "user_preferences" ADD CONSTRAINT "FK_458057fa75b66e68a275647da2e" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`);
-        await queryRunner.query(`ALTER TABLE "assigment_submissions" ADD CONSTRAINT "FK_06bbd0bede900791911f006c959" FOREIGN KEY ("enrollment_id") REFERENCES "enrollments"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`);
+        await queryRunner.query(`DROP INDEX IF EXISTS "uq_user_preferences_user"`);
+        await queryRunner.query(`CREATE UNIQUE INDEX IF NOT EXISTS "uq_user_preferences_user" ON "user_preferences" ("user_id") `);
+        
+        await queryRunner.query(`
+            DO $$
+            BEGIN
+                IF NOT EXISTS (SELECT 1 FROM information_schema.table_constraints WHERE constraint_name='FK_458057fa75b66e68a275647da2e') THEN
+                    ALTER TABLE "user_preferences" ADD CONSTRAINT "FK_458057fa75b66e68a275647da2e" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE NO ACTION ON UPDATE NO ACTION;
+                END IF;
+            END $$;
+        `);
+
+        await queryRunner.query(`
+            DO $$
+            BEGIN
+                IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='assigment_submissions' AND column_name='enrollment_id') AND 
+                   NOT EXISTS (SELECT 1 FROM information_schema.table_constraints WHERE constraint_name='FK_06bbd0bede900791911f006c959') THEN
+                    ALTER TABLE "assigment_submissions" ADD CONSTRAINT "FK_06bbd0bede900791911f006c959" FOREIGN KEY ("enrollment_id") REFERENCES "enrollments"("id") ON DELETE NO ACTION ON UPDATE NO ACTION;
+                END IF;
+            END $$;
+        `);
     }
 
     public async down(queryRunner: QueryRunner): Promise<void> {
