@@ -1,12 +1,15 @@
+import { Type } from 'class-transformer';
 import { IsBoolean, IsNumber, IsOptional, IsString } from 'class-validator';
 
 export class UserQueryDto {
   @IsOptional()
   @IsNumber()
+  @Type(() => Number)
   page?: number;
 
   @IsOptional()
   @IsNumber()
+  @Type(() => Number)
   size?: number;
 
   @IsOptional()
@@ -15,5 +18,6 @@ export class UserQueryDto {
 
   @IsOptional()
   @IsBoolean()
+  @Type(() => Boolean)
   isActive?: boolean;
 }

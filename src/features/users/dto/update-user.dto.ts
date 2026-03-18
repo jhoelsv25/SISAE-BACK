@@ -80,4 +80,22 @@ export class UpdateUserDto extends PartialType(OmitType(CreateUserDto, ['passwor
   @IsOptional()
   @IsDateString({}, { message: 'La fecha de último login debe ser una fecha válida' })
   lastLogin?: Date;
+
+  @ApiProperty({
+    description: 'Nombre real del usuario',
+    example: 'Juan',
+    required: false,
+  })
+  @IsOptional()
+  @IsString({ message: 'El nombre debe ser una cadena de texto' })
+  firstName?: string;
+
+  @ApiProperty({
+    description: 'Apellido real del usuario',
+    example: 'Pérez',
+    required: false,
+  })
+  @IsOptional()
+  @IsString({ message: 'El apellido debe ser una cadena de texto' })
+  lastName?: string;
 }

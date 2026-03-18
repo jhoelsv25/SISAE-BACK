@@ -35,17 +35,23 @@ export class UserWriteRepository {
 
   async update(id: string, dto: UpdateUserDto, currentUser: UserEntity): Promise<UserEntity> {
     try {
-      // Excluir password del DTO de actualización
-      const { password, ...dtoWithoutPassword } = dto as any;
+      // Excluir password, firstName y lastName del DTO de actualización del Usuario
+      const { password, firstName, lastName, ...dtoWithoutPersonFields } = dto as any;
 
-      // Actualizar solo los campos que vienen en el DTO
-      Object.assign(currentUser, dtoWithoutPassword);
+      // Actualizar solo los campos que pertenecen a la entidad Usuario
+      Object.assign(currentUser, dtoWithoutPersonFields);
+
+      // Actualizar campos de la Persona asociada si vienen en el DTO
+      if (currentUser.person && (firstName || lastName)) {
+        if (firstName) currentUser.person.firstName = firstName;
+        if (lastName) currentUser.person.lastName = lastName;
+      }
 
       // Si viene role, actualizar la relación
       if (dto.role) {
         currentUser.role = { id: dto.role } as any;
       }
-      // Si viene person, actualizar la relación
+      // Si viene person (ID), actualizar la relación
       if (dto.person) {
         currentUser.person = { id: dto.person } as any;
       }
