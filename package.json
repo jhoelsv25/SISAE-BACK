@@ -34,7 +34,7 @@
     "db:backup": "./scripts/db-backup.sh",
     "redis:start": "./scripts/redis-start.sh",
     "redis:stop": "./scripts/redis-stop.sh",
-    "setup": "./scripts/setup.sh",
+    "setup": "npm run db:start && npm run redis:start && sleep 5 && npm run migration:run && npm run db:procedures && npm run seed",
     "clean": "./scripts/clean.sh",
     "dev": "./scripts/dev.sh",
     "health": "./scripts/health-check.sh",

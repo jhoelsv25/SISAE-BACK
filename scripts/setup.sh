@@ -33,7 +33,11 @@ echo "🐳 Iniciando base de datos..."
 ./scripts/db-start.sh
 
 echo ""
-echo "⏳ Esperando a que PostgreSQL esté listo..."
+echo "🧩 Iniciando Redis..."
+./scripts/redis-start.sh
+
+echo ""
+echo "⏳ Esperando a que PostgreSQL y Redis estén listos..."
 sleep 5
 
 echo ""
