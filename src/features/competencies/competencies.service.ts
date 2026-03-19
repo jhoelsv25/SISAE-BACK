@@ -19,8 +19,12 @@ export class CompetenciesService {
         ...dto,
         course: dto.course ? { id: dto.course } : undefined,
       });
-      await this.repo.save(competency);
-      return { message: 'Competencia creada correctamente', data: competency };
+      const saved = await this.repo.save(competency);
+      const hydrated = await this.repo.findOne({
+        where: { id: saved.id },
+        relations: ['course'],
+      });
+      return { message: 'Competencia creada correctamente', data: hydrated };
     } catch (error) {
       throw new ErrorHandler('Ocurrió un error al crear la competencia', 500);
     }
@@ -28,8 +32,13 @@ export class CompetenciesService {
 
   async findAll(filter: any) {
     try {
+      const { courseId, ...rest } = filter ?? {};
+      const where: any = { ...rest };
+      if (courseId) {
+        where.course = { id: courseId };
+      }
       const competencies = await this.repo.find({
-        where: { ...filter },
+        where,
         relations: ['course'],
       });
       return { message: 'Competencias encontradas correctamente', data: competencies };
@@ -63,8 +72,12 @@ export class CompetenciesService {
         ...dto,
         course: dto.course ? { id: dto.course } : undefined,
       });
-      await this.repo.save(updatedCompetency);
-      return { message: 'Competencia actualizada correctamente', data: updatedCompetency };
+      const saved = await this.repo.save(updatedCompetency);
+      const hydrated = await this.repo.findOne({
+        where: { id: saved.id },
+        relations: ['course'],
+      });
+      return { message: 'Competencia actualizada correctamente', data: hydrated };
     } catch (error) {
       throw new ErrorHandler('Ocurrió un error al actualizar la competencia', 500);
     }

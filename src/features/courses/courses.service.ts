@@ -23,8 +23,12 @@ export class CoursesService {
         subjectArea: { id: subjectAreaId },
         grade: { id: gradeId },
       });
-      await this.repo.save(course);
-      return { message: 'Curso creado correctamente', data: course };
+      const saved = await this.repo.save(course);
+      const hydrated = await this.repo.findOne({
+        where: { id: saved.id },
+        relations: ['subjectArea', 'grade'],
+      });
+      return { message: 'Curso creado correctamente', data: hydrated };
     } catch (error) {
       const message = error?.message ?? 'Ocurrió un error al crear el curso';
       throw new ErrorHandler(message, 500);
@@ -33,7 +37,18 @@ export class CoursesService {
 
   async findAll(filter: any) {
     try {
-      const courses = await this.repo.find({ where: { ...filter } });
+      const { gradeId, subjectAreaId, ...rest } = filter ?? {};
+      const where: any = { ...rest };
+      if (gradeId) {
+        where.grade = { id: gradeId };
+      }
+      if (subjectAreaId) {
+        where.subjectArea = { id: subjectAreaId };
+      }
+      const courses = await this.repo.find({
+        where,
+        relations: ['subjectArea', 'grade'],
+      });
       return { message: 'Cursos encontrados correctamente', data: courses };
     } catch (error) {
       throw new ErrorHandler('Ocurrió un error al obtener los cursos', 500);
@@ -42,7 +57,10 @@ export class CoursesService {
 
   async findOne(id: string) {
     try {
-      const course = await this.repo.findOne({ where: { id } });
+      const course = await this.repo.findOne({
+        where: { id },
+        relations: ['subjectArea', 'grade'],
+      });
       if (!course) {
         throw new ErrorHandler('Curso no encontrado', 404);
       }
@@ -54,8 +72,22 @@ export class CoursesService {
 
   async update(id: string, dto: UpdateCourseDto) {
     try {
-      await this.repo.update(id, dto);
-      const updatedCourse = await this.repo.findOne({ where: { id } });
+      const { subjectAreaId, gradeId, ...rest } = dto as UpdateCourseDto & {
+        subjectAreaId?: string;
+        gradeId?: string;
+      };
+      const payload: any = { ...rest };
+      if (subjectAreaId) {
+        payload.subjectArea = { id: subjectAreaId };
+      }
+      if (gradeId) {
+        payload.grade = { id: gradeId };
+      }
+      await this.repo.update(id, payload);
+      const updatedCourse = await this.repo.findOne({
+        where: { id },
+        relations: ['subjectArea', 'grade'],
+      });
       return { message: 'Curso actualizado correctamente', data: updatedCourse };
     } catch (error) {
       throw new ErrorHandler('Ocurrió un error al actualizar el curso', 500);

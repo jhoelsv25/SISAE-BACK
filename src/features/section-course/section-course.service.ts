@@ -23,8 +23,12 @@ export class SectionCourseService {
         course: course ? { id: course } : undefined,
         teacher: teacher ? { id: teacher } : undefined,
       });
-      await this.repo.save(sectionCourse);
-      return { message: 'Curso asignado a sección correctamente', data: sectionCourse };
+      const saved = await this.repo.save(sectionCourse);
+      const hydrated = await this.repo.findOne({
+        where: { id: saved.id },
+        relations: ['section', 'course', 'academicYear', 'teacher', 'teacher.person'],
+      });
+      return { message: 'Curso asignado a sección correctamente', data: hydrated };
     } catch (error) {
       throw new ErrorHandler('Ocurrió un error al crear el sectionCourse', 500);
     }
@@ -32,10 +36,35 @@ export class SectionCourseService {
 
   async findAll(filter: any) {
     try {
-      const [data, total] = await this.repo.findAndCount({
-        where: filter,
-        relations: ['section', 'course', 'academicYear', 'teacher', 'teacher.person'],
+      const { courseId, sectionId, academicYearId, teacherId, ...rest } = filter ?? {};
+      const qb = this.repo
+        .createQueryBuilder('sectionCourse')
+        .leftJoinAndSelect('sectionCourse.section', 'section')
+        .leftJoinAndSelect('sectionCourse.course', 'course')
+        .leftJoinAndSelect('sectionCourse.academicYear', 'academicYear')
+        .leftJoinAndSelect('sectionCourse.teacher', 'teacher')
+        .leftJoinAndSelect('teacher.person', 'teacherPerson');
+
+      Object.entries(rest).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && value !== '') {
+          qb.andWhere(`sectionCourse.${key} = :${key}`, { [key]: value });
+        }
       });
+
+      if (courseId) {
+        qb.andWhere('course.id = :courseId', { courseId });
+      }
+      if (sectionId) {
+        qb.andWhere('section.id = :sectionId', { sectionId });
+      }
+      if (academicYearId) {
+        qb.andWhere('academicYear.id = :academicYearId', { academicYearId });
+      }
+      if (teacherId) {
+        qb.andWhere('teacher.id = :teacherId', { teacherId });
+      }
+
+      const [data, total] = await qb.getManyAndCount();
       return { message: 'sectionCourse obtenidos correctamente', data, total };
     } catch (error) {
       throw new ErrorHandler('Ocurrió un error al obtener todos los sectionCourse', 500);
@@ -63,9 +92,12 @@ export class SectionCourseService {
       if (academicYear !== undefined) payload.academicYear = academicYear ? { id: academicYear } : undefined;
       if (section !== undefined) payload.section = section ? { id: section } : undefined;
       if (course !== undefined) payload.course = course ? { id: course } : undefined;
-      if (teacher !== undefined) payload.teacherId = teacher || null;
+      if (teacher !== undefined) payload.teacher = teacher ? { id: teacher } : null;
       await this.repo.update(id, payload);
-      const updatedSectionCourse = await this.repo.findOne({ where: { id } });
+      const updatedSectionCourse = await this.repo.findOne({
+        where: { id },
+        relations: ['section', 'course', 'academicYear', 'teacher', 'teacher.person'],
+      });
       if (!updatedSectionCourse) {
         throw new ErrorHandler('sectionCourse no encontrado', 404);
       }

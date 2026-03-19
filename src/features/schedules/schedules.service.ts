@@ -20,7 +20,11 @@ export class SchedulesService {
         description: description ?? '',
         sectionCourse: sectionCourse ? { id: sectionCourse } : undefined,
       });
-      return this.repo.save(schedule);
+      const saved = await this.repo.save(schedule);
+      return this.repo.findOne({
+        where: { id: saved.id },
+        relations: ['sectionCourse', 'sectionCourse.section', 'sectionCourse.course'],
+      });
     } catch (error: any) {
       const driverError = error?.driverError ?? error;
       const code = driverError?.code;
@@ -38,11 +42,37 @@ export class SchedulesService {
   }
 
   async findAll(filter: any) {
-    return this.repo.find({ where: filter });
+    const { sectionId, courseId, sectionCourseId, ...rest } = filter ?? {};
+    const qb = this.repo
+      .createQueryBuilder('schedule')
+      .leftJoinAndSelect('schedule.sectionCourse', 'sectionCourse')
+      .leftJoinAndSelect('sectionCourse.section', 'section')
+      .leftJoinAndSelect('sectionCourse.course', 'course');
+
+    Object.entries(rest).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== '') {
+        qb.andWhere(`schedule.${key} = :${key}`, { [key]: value });
+      }
+    });
+
+    if (sectionCourseId) {
+      qb.andWhere('sectionCourse.id = :sectionCourseId', { sectionCourseId });
+    }
+    if (sectionId) {
+      qb.andWhere('section.id = :sectionId', { sectionId });
+    }
+    if (courseId) {
+      qb.andWhere('course.id = :courseId', { courseId });
+    }
+
+    return qb.getMany();
   }
 
   async findOne(id: string) {
-    return this.repo.findOne({ where: { id } });
+    return this.repo.findOne({
+      where: { id },
+      relations: ['sectionCourse', 'sectionCourse.section', 'sectionCourse.course'],
+    });
   }
 
   async update(id: string, updateScheduleDto: UpdateScheduleDto) {
