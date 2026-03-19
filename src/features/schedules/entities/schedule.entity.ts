@@ -1,7 +1,7 @@
 import { BaseEntity } from '@common/entities/base.entity';
 import { DayOfWeek } from '@common/enums/global.enum';
 import { SectionCourseEntity } from '@features/section-course/entities/section-course.entity';
-import { Column, Entity, ManyToOne } from 'typeorm';
+import { Column, Entity, JoinColumn, ManyToOne } from 'typeorm';
 
 @Entity({ name: 'schedules' })
 export class ScheduleEntity extends BaseEntity {
@@ -27,5 +27,6 @@ export class ScheduleEntity extends BaseEntity {
   }
 
   @ManyToOne(() => SectionCourseEntity)
+  @JoinColumn({ name: 'section_course_id' })
   sectionCourse: SectionCourseEntity;
 }
