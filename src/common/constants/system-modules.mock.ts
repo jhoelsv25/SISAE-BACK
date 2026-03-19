@@ -27,24 +27,31 @@ export const MENU_MODULES_MOCK: MenuItem[] = [
     visibility: Visibility.PUBLIC,
   },
 
-  // ============================================
-  // CONFIGURACIÓN ACADÉMICA
-  // ============================================
   {
     id: 'academic-setup',
     icon: 'fa-cog',
-    label: 'Configuración Académica',
+    label: 'Estructura Académica',
     route: '/academic-setup',
     order: 2,
-    permissions: ['manage_academic_setup'],
+    permissions: [
+      'manage_academic_setup',
+      'view_academic_year',
+      'view_academic_period',
+      'view_grade_level',
+      'view_subject_area',
+      'view_course',
+      'view_competency',
+      'view_section',
+      'view_schedule',
+    ],
     visibility: Visibility.PUBLIC,
     children: [
       {
         id: 'academic-years',
-        icon: 'fa-calendar-check',
-        label: 'Años y Periodos',
+        icon: 'fa-calendar-alt',
+        label: 'Años Académicos',
         route: '/academic-setup/years',
-        permissions: ['view_academic_year'],
+        permissions: ['view_academic_year', 'manage_academic_year'],
         visibility: Visibility.PUBLIC,
       },
       {
@@ -52,15 +59,23 @@ export const MENU_MODULES_MOCK: MenuItem[] = [
         icon: 'fa-layer-group',
         label: 'Niveles y Grados',
         route: '/academic-setup/grade-levels',
-        permissions: ['view_grade_level'],
+        permissions: ['view_grade_level', 'manage_grade_level'],
         visibility: Visibility.PUBLIC,
       },
       {
         id: 'subject-areas',
-        icon: 'fa-th-large',
-        label: 'Áreas y Cursos',
+        icon: 'fa-th',
+        label: 'Áreas Curriculares',
         route: '/academic-setup/subject-areas',
-        permissions: ['view_subject_area'],
+        permissions: ['view_subject_area', 'manage_subject_area'],
+        visibility: Visibility.PUBLIC,
+      },
+      {
+        id: 'courses',
+        icon: 'fa-book',
+        label: 'Cursos',
+        route: '/academic-setup/courses',
+        permissions: ['view_course', 'manage_course'],
         visibility: Visibility.PUBLIC,
       },
       {
@@ -68,30 +83,15 @@ export const MENU_MODULES_MOCK: MenuItem[] = [
         icon: 'fa-star',
         label: 'Competencias',
         route: '/academic-setup/competencies',
-        permissions: ['view_competency'],
+        permissions: ['view_competency', 'manage_competency'],
         visibility: Visibility.PUBLIC,
       },
-    ],
-  },
-
-  // ============================================
-  // ORGANIZACIÓN (Secciones)
-  // ============================================
-  {
-    id: 'organization',
-    icon: 'fa-sitemap',
-    label: 'Organización Escolar',
-    route: '/organization',
-    order: 3,
-    permissions: ['view_organization'],
-    visibility: Visibility.PUBLIC,
-    children: [
       {
         id: 'sections',
         icon: 'fa-users',
         label: 'Secciones',
         route: '/organization/sections',
-        permissions: ['view_section'],
+        permissions: ['view_section', 'manage_section'],
         visibility: Visibility.PUBLIC,
       },
       {
@@ -99,21 +99,18 @@ export const MENU_MODULES_MOCK: MenuItem[] = [
         icon: 'fa-calendar-days',
         label: 'Horarios',
         route: '/organization/schedules',
-        permissions: ['view_schedule'],
+        permissions: ['view_schedule', 'manage_schedule'],
         visibility: Visibility.PUBLIC,
       },
     ],
   },
 
-  // ============================================
-  // ESTUDIANTES 
-  // ============================================
   {
     id: 'students',
     icon: 'fa-user-graduate',
     label: 'Estudiantes',
     route: '/students',
-    order: 4,
+    order: 3,
     permissions: ['view_student'],
     visibility: Visibility.PUBLIC,
     children: [
@@ -130,7 +127,7 @@ export const MENU_MODULES_MOCK: MenuItem[] = [
         icon: 'fa-file-signature',
         label: 'Matrículas',
         route: '/students/enrollments',
-        permissions: ['view_enrollment'],
+        permissions: ['view_enrollment', 'manage_enrollment'],
         visibility: Visibility.PUBLIC,
       },
       {
@@ -138,21 +135,26 @@ export const MENU_MODULES_MOCK: MenuItem[] = [
         icon: 'fa-user-shield',
         label: 'Apoderados',
         route: '/students/guardians',
-        permissions: ['view_guardian'],
+        permissions: ['view_guardian', 'manage_guardian'],
+        visibility: Visibility.PUBLIC,
+      },
+      {
+        id: 'student-observations',
+        icon: 'fa-comment-medical',
+        label: 'Observaciones',
+        route: '/students/observations',
+        permissions: ['view_observation', 'manage_observation'],
         visibility: Visibility.PUBLIC,
       },
     ],
   },
 
-  // ============================================
-  // DOCENTES
-  // ============================================
   {
     id: 'teachers',
     icon: 'fa-chalkboard-teacher',
     label: 'Docentes',
     route: '/teachers',
-    order: 5,
+    order: 4,
     permissions: ['view_teacher'],
     visibility: Visibility.PUBLIC,
     children: [
@@ -169,59 +171,110 @@ export const MENU_MODULES_MOCK: MenuItem[] = [
         icon: 'fa-user-check',
         label: 'Asistencia Docente',
         route: '/teachers/attendances',
-        permissions: ['view_teacher_attendance'],
+        permissions: ['view_teacher_attendance', 'manage_teacher_attendance'],
         visibility: Visibility.PUBLIC,
       },
     ],
   },
 
-  // ============================================
-  // EVALUACIONES Y ASISTENCIA
-  // ============================================
   {
-    id: 'academic-management',
-    icon: 'fa-book-reader',
-    label: 'Académico',
-    order: 6,
-    permissions: ['view_assessment', 'view_attendance'],
+    id: 'attendance',
+    icon: 'fa-clipboard-check',
+    label: 'Asistencia Estudiantes',
+    route: '/attendance',
+    order: 5,
+    permissions: ['view_attendance'],
     visibility: Visibility.PUBLIC,
     children: [
       {
-        id: 'assessments',
-        icon: 'fa-file-signature',
-        label: 'Evaluaciones',
-        route: '/assessments/list',
-        permissions: ['view_assessment'],
+        id: 'attendance-register',
+        icon: 'fa-check-circle',
+        label: 'Registro de Asistencia',
+        route: '/attendance/register',
+        permissions: ['manage_attendance'],
         visibility: Visibility.PUBLIC,
       },
       {
-        id: 'attendance',
-        icon: 'fa-clipboard-check',
-        label: 'Asistencia Estudiantes',
-        route: '/attendance/register',
+        id: 'attendance-reports',
+        icon: 'fa-chart-pie',
+        label: 'Reportes',
+        route: '/attendance/reports',
         permissions: ['view_attendance'],
         visibility: Visibility.PUBLIC,
       },
+    ],
+  },
+
+  {
+    id: 'assessments',
+    icon: 'fa-file-alt',
+    label: 'Evaluaciones',
+    route: '/assessments',
+    order: 6,
+    permissions: ['view_assessment'],
+    visibility: Visibility.PUBLIC,
+    children: [
       {
-        id: 'behavior',
-        icon: 'fa-flag',
-        label: 'Conducta',
+        id: 'assessments-list',
+        icon: 'fa-clipboard-list',
+        label: 'Evaluaciones',
+        route: '/assessments/list',
+        permissions: ['view_assessment', 'manage_assessment'],
+        visibility: Visibility.PUBLIC,
+      },
+      {
+        id: 'assessment-scores',
+        icon: 'fa-pen-square',
+        label: 'Registro de Calificaciones',
+        route: '/assessments/scores',
+        permissions: ['manage_assessment_score'],
+        visibility: Visibility.PUBLIC,
+      },
+      {
+        id: 'grades',
+        icon: 'fa-chart-line',
+        label: 'Notas Finales',
+        route: '/assessments/grades',
+        permissions: ['view_grade', 'manage_grade'],
+        visibility: Visibility.PUBLIC,
+      },
+    ],
+  },
+
+  {
+    id: 'behavior',
+    icon: 'fa-flag',
+    label: 'Conducta',
+    route: '/behavior',
+    order: 7,
+    permissions: ['view_behavior'],
+    visibility: Visibility.PUBLIC,
+    children: [
+      {
+        id: 'behavior-records',
+        icon: 'fa-clipboard',
+        label: 'Registro de Conducta',
         route: '/behavior/records',
+        permissions: ['view_behavior', 'manage_behavior'],
+        visibility: Visibility.PUBLIC,
+      },
+      {
+        id: 'behavior-reports',
+        icon: 'fa-chart-bar',
+        label: 'Reportes',
+        route: '/behavior/reports',
         permissions: ['view_behavior'],
         visibility: Visibility.PUBLIC,
       },
     ],
   },
 
-  // ============================================
-  // AULA VIRTUAL
-  // ============================================
   {
     id: 'virtual-classroom',
-    icon: 'fa-laptop-code',
+    icon: 'fa-chalkboard',
     label: 'Aula Virtual',
     route: '/virtual-classroom',
-    order: 7,
+    order: 8,
     permissions: ['view_virtual_classroom'],
     visibility: Visibility.PUBLIC,
     children: [
@@ -233,62 +286,139 @@ export const MENU_MODULES_MOCK: MenuItem[] = [
         permissions: ['view_virtual_classroom'],
         visibility: Visibility.PUBLIC,
       },
-      {
-        id: 'assignments',
-        icon: 'fa-tasks',
-        label: 'Tareas y Entregas',
-        route: '/virtual-classroom/list',
-        permissions: ['view_assignment'],
-        visibility: Visibility.PUBLIC,
-      },
     ],
   },
 
-  // ============================================
-  // SERVICIOS
-  // ============================================
   {
-    id: 'services',
-    icon: 'fa-concierge-bell',
-    label: 'Servicios',
-    order: 8,
-    permissions: ['view_payment', 'view_communication'],
+    id: 'payments',
+    icon: 'fa-money-bill-wave',
+    label: 'Pagos',
+    route: '/payments',
+    order: 9,
+    permissions: ['view_payment'],
     visibility: Visibility.PUBLIC,
     children: [
       {
-        id: 'payments',
-        icon: 'fa-money-bill-wave',
-        label: 'Caja y Pagos',
+        id: 'payments-register',
+        icon: 'fa-file-invoice-dollar',
+        label: 'Registro de Pagos',
         route: '/payments/register',
-        permissions: ['view_payment'],
+        permissions: ['manage_payment'],
         visibility: Visibility.PUBLIC,
       },
       {
-        id: 'communications',
-        icon: 'fa-bullhorn',
-        label: 'Comunicaciones',
-        route: '/communications/announcements',
-        permissions: ['view_communication'],
+        id: 'payments-pending',
+        icon: 'fa-exclamation-triangle',
+        label: 'Pendientes',
+        route: '/payments/pending',
+        permissions: ['view_payment'],
+        badge: 0,
+        visibility: Visibility.PUBLIC,
+      },
+      {
+        id: 'payments-history',
+        icon: 'fa-history',
+        label: 'Historial',
+        route: '/payments/history',
+        permissions: ['view_payment'],
         visibility: Visibility.PUBLIC,
       },
     ],
   },
 
-  // ============================================
-  // ADMINISTRACIÓN
-  // ============================================
+  {
+    id: 'communications',
+    icon: 'fa-bullhorn',
+    label: 'Comunicaciones',
+    route: '/communications',
+    order: 10,
+    permissions: ['view_communication'],
+    visibility: Visibility.PUBLIC,
+    children: [
+      {
+        id: 'announcements',
+        icon: 'fa-bullhorn',
+        label: 'Anuncios',
+        route: '/communications/announcements',
+        permissions: ['view_announcement', 'manage_announcement'],
+        visibility: Visibility.PUBLIC,
+      },
+      {
+        id: 'notifications',
+        icon: 'fa-bell',
+        label: 'Notificaciones',
+        route: '/communications/notifications',
+        permissions: ['view_notification'],
+        badge: 0,
+        visibility: Visibility.PUBLIC,
+      },
+      {
+        id: 'email-logs',
+        icon: 'fa-envelope-open-text',
+        label: 'Historial de Emails',
+        route: '/communications/email-logs',
+        permissions: ['view_email_log'],
+        visibility: Visibility.PUBLIC,
+      },
+    ],
+  },
+
+  {
+    id: 'reports',
+    icon: 'fa-chart-bar',
+    label: 'Reportes',
+    route: '/reports',
+    order: 11,
+    permissions: ['view_reports'],
+    visibility: Visibility.PUBLIC,
+    children: [
+      {
+        id: 'reports-academic',
+        icon: 'fa-graduation-cap',
+        label: 'Académicos',
+        route: '/reports/academic',
+        permissions: ['view_report'],
+        visibility: Visibility.PUBLIC,
+      },
+      {
+        id: 'reports-attendance',
+        icon: 'fa-user-check',
+        label: 'Asistencia',
+        route: '/reports/attendance',
+        permissions: ['view_report'],
+        visibility: Visibility.PUBLIC,
+      },
+      {
+        id: 'reports-behavior',
+        icon: 'fa-flag',
+        label: 'Conducta',
+        route: '/reports/behavior',
+        permissions: ['view_report'],
+        visibility: Visibility.PUBLIC,
+      },
+      {
+        id: 'reports-financial',
+        icon: 'fa-money-bill-wave',
+        label: 'Financieros',
+        route: '/reports/financial',
+        permissions: ['view_report'],
+        visibility: Visibility.PUBLIC,
+      },
+    ],
+  },
+
   {
     id: 'administration',
     icon: 'fa-cogs',
     label: 'Administración',
     route: '/administration',
-    order: 9,
+    order: 12,
     permissions: ['view_administration'],
     visibility: Visibility.PUBLIC,
     children: [
       {
         id: 'institution',
-        icon: 'fa-university',
+        icon: 'fa-building',
         label: 'Institución',
         route: '/administration/institution',
         permissions: ['manage_institution'],
@@ -296,23 +426,23 @@ export const MENU_MODULES_MOCK: MenuItem[] = [
       },
       {
         id: 'users',
-        icon: 'fa-user-cog',
-        label: 'Gestión de Usuarios',
+        icon: 'fa-users-cog',
+        label: 'Usuarios',
         route: '/administration/users',
-        permissions: ['view_user'],
+        permissions: ['view_user', 'manage_user'],
         visibility: Visibility.PUBLIC,
       },
       {
-        id: 'roles-permissions',
-        icon: 'fa-user-lock',
+        id: 'roles',
+        icon: 'fa-user-tag',
         label: 'Roles y Permisos',
         route: '/administration/roles',
-        permissions: ['view_role', 'view_permission'],
+        permissions: ['view_role', 'manage_role', 'view_permission', 'manage_permission'],
         visibility: Visibility.PUBLIC,
       },
       {
         id: 'audit-logs',
-        icon: 'fa-history',
+        icon: 'fa-file-search',
         label: 'Auditoría',
         route: '/administration/audit-logs',
         permissions: ['view_audit_log'],

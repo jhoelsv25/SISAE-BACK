@@ -57,7 +57,7 @@ export async function seedStateSchool(dataSource: DataSource) {
       modality: Modality.IN_PERSON,
       gradingSystem: GradingSystem.PERCENTAGE,
       passingDate: new Date(`${yearValue}-12-01`),
-      passingGrade: 11,
+      passingGrade: '11',
       status: AcademicYearStatus.ONGOING,
       academicCalendarUrl: 'https://carmelinas.edu.pe/calendario-2026',
       institution,

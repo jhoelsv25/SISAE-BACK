@@ -313,6 +313,8 @@ export class AuthService {
           roleLabel: roleName,
           code: teacher.teacherCode,
           institution: teacher.institution?.name ?? null,
+          institutionId: teacher.institution?.id ?? null,
+          institutionName: teacher.institution?.name ?? null,
           details: {
             specialization: teacher.specialization,
             professionalTitle: teacher.professionalTitle,
@@ -342,6 +344,8 @@ export class AuthService {
           roleLabel: roleName,
           code: student.studentCode,
           institution: student.institution?.name ?? null,
+          institutionId: student.institution?.id ?? null,
+          institutionName: student.institution?.name ?? null,
           details: {
             studentType: student.studentType,
             status: student.status,

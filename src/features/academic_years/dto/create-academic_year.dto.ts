@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsDateString, IsEnum, IsInt, IsString, IsUUID, MaxLength, Min } from 'class-validator';
+import { IsDateString, IsEnum, IsInt, IsOptional, IsString, IsUUID, MaxLength, Min } from 'class-validator';
 import { AcademicYearStatus, GradingSystem, Modality } from '../enums/academic_year.enum';
 
 export class CreateAcademicYearDto {
@@ -44,9 +44,13 @@ export class CreateAcademicYearDto {
   @IsDateString({}, { message: 'La fecha límite debe estar en formato ISO8601.' })
   passingDate: string;
 
-  @ApiProperty({ example: 11, description: 'Nota mínima para aprobar el año académico.' })
-  @IsInt({ message: 'La nota mínima debe ser un número entero.' })
-  passingGrade: number;
+  @ApiProperty({
+    example: '11',
+    description: 'Regla mínima para aprobar el año académico. Puede ser numérica, letra o rango.',
+  })
+  @IsString({ message: 'La regla mínima aprobatoria debe ser una cadena de texto.' })
+  @MaxLength(50, { message: 'La regla mínima aprobatoria no debe exceder 50 caracteres.' })
+  passingGrade: string;
 
   @ApiProperty({
     example: 'https://colegio.edu/calendario2025.pdf',
@@ -73,4 +77,14 @@ export class CreateAcademicYearDto {
   @IsString({ message: 'El ID de la institución debe ser una cadena UUID.' })
   @IsUUID('4', { message: 'El ID de la institución debe ser un UUID válido.' })
   institution: string;
+
+  @ApiProperty({
+    example: 4,
+    description: 'Cantidad de periodos a generar automáticamente para este año académico.',
+    required: false,
+  })
+  @IsOptional()
+  @IsInt({ message: 'La cantidad de periodos debe ser un número entero.' })
+  @Min(0, { message: 'La cantidad de periodos no puede ser negativa.' })
+  periodCount?: number;
 }

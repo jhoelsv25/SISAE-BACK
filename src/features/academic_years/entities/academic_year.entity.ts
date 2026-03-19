@@ -35,8 +35,8 @@ export class AcademicYearEntity extends BaseEntity {
   @Column({ type: 'date' })
   passingDate: Date;
 
-  @Column({ type: 'int' })
-  passingGrade: number;
+  @Column({ type: 'varchar', length: 50 })
+  passingGrade: string;
 
   @Column({ type: 'varchar', length: 255 })
   academicCalendarUrl: string;
@@ -47,6 +47,9 @@ export class AcademicYearEntity extends BaseEntity {
     default: AcademicYearStatus.PLANNED,
   })
   status: AcademicYearStatus;
+
+  @Column({ type: 'int', default: 0 })
+  periodCount: number;
 
   @OneToMany(() => PeriodEntity, period => period.academicYear)
   periods: PeriodEntity[];
