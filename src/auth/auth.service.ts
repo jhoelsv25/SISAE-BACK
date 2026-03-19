@@ -75,6 +75,9 @@ export class AuthService {
         userAgent: meta?.userAgent,
       });
 
+      await this.userService.updateLastLogin(user.id);
+      user.lastLogin = new Date();
+
       return {
         message: 'Inicio de sesión exitoso, bienvenido ' + user.username,
         data: {

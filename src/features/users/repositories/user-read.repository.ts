@@ -83,6 +83,17 @@ export class UserReadRepository {
     }
   }
 
+  async findAllCursor(params: any): Promise<{ data: any[]; nextCursor: any }> {
+    try {
+      const result = await this.repo.query(`SELECT get_users_cursor($1) as result`, [
+        JSON.stringify(params),
+      ]);
+      return result[0].result;
+    } catch (error) {
+      throw new ErrorHandler(error.message, error.status || 500);
+    }
+  }
+
   async findActiveUsers(): Promise<UserEntity[]> {
     try {
       return await this.repo.find({

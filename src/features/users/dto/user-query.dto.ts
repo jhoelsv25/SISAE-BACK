@@ -14,10 +14,39 @@ export class UserQueryDto {
 
   @IsOptional()
   @IsString()
+  cursor?: string;
+
+  @IsOptional()
+  @IsNumber()
+  @Type(() => Number)
+  limit?: number;
+
+  @IsOptional()
+  @IsString()
   search?: string;
+
+  @IsOptional()
+  @IsString()
+  datePreset?: string;
+
+  @IsOptional()
+  @IsString()
+  roleId?: string;
+
+  @IsOptional()
+  @IsString()
+  roleName?: string;
 
   @IsOptional()
   @IsBoolean()
   @Type(() => Boolean)
   isActive?: boolean;
+
+  @IsOptional()
+  @IsString()
+  createdFrom?: string;
+
+  @IsOptional()
+  @IsString()
+  createdTo?: string;
 }
