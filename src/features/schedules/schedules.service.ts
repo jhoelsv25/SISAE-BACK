@@ -52,7 +52,7 @@ export class SchedulesService {
 
   async findAll(filter: any) {
     try {
-      const { sectionId, courseId, sectionCourseId, ...rest } = filter ?? {};
+      const { sectionId, courseId, sectionCourseId, teacherId, ...rest } = filter ?? {};
       const schedules = await this.repo.find({
         relations: {
           sectionCourse: {
@@ -70,6 +70,8 @@ export class SchedulesService {
           !sectionId || schedule.sectionCourse?.section?.id === sectionId;
         const matchCourse =
           !courseId || schedule.sectionCourse?.course?.id === courseId;
+        const matchTeacher =
+          !teacherId || schedule.sectionCourse?.teacher?.id === teacherId;
 
         const matchRest = Object.entries(rest).every(([key, value]) => {
           if (value === undefined || value === null || value === '') {
@@ -78,7 +80,7 @@ export class SchedulesService {
           return String(((schedule as unknown as Record<string, unknown>)[key]) ?? '') === String(value);
         });
 
-        return matchSectionCourse && matchSection && matchCourse && matchRest;
+        return matchSectionCourse && matchSection && matchCourse && matchTeacher && matchRest;
       });
     } catch (error: any) {
       const driverError = error?.driverError ?? error;

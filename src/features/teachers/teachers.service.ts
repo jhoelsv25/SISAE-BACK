@@ -23,8 +23,12 @@ export class TeachersService {
         institution: institution ? { id: institution } : undefined,
         person: person ? { id: person } : undefined,
       });
-      await this.teachersRepository.save(teacher);
-      return { message: 'Docente creado correctamente', data: teacher };
+      const saved = await this.teachersRepository.save(teacher);
+      const hydrated = await this.teachersRepository.findOne({
+        where: { id: saved.id },
+        relations: ['person', 'institution'],
+      });
+      return { message: 'Docente creado correctamente', data: hydrated ?? saved };
     } catch (error) {
       throw new ErrorHandler('Ocurrio un error al crear el docente', 500);
     }
@@ -44,11 +48,19 @@ export class TeachersService {
       const qb = this.teachersRepository
         .createQueryBuilder('teacher')
         .leftJoinAndSelect('teacher.person', 'person')
+        .leftJoinAndSelect('teacher.institution', 'institution')
         .where(where);
 
       if (search) {
         qb.andWhere(
-          '(teacher.teacherCode ILIKE :search OR teacher.specialization ILIKE :search OR teacher.professionalTitle ILIKE :search)',
+          `(
+            teacher.teacherCode ILIKE :search OR
+            teacher.specialization ILIKE :search OR
+            teacher.professionalTitle ILIKE :search OR
+            person.firstName ILIKE :search OR
+            person.lastName ILIKE :search OR
+            person.email ILIKE :search
+          )`,
           { search: `%${search}%` },
         );
       }
@@ -72,7 +84,7 @@ export class TeachersService {
     try {
       const teacher = await this.teachersRepository.findOne({
         where: { id },
-        relations: ['person'],
+        relations: ['person', 'institution'],
       });
       if (!teacher) {
         throw new ErrorHandler('Docente no encontrado', 404);
@@ -96,7 +108,11 @@ export class TeachersService {
         person: person ? { id: person } : undefined,
       });
       await this.teachersRepository.save(teacher);
-      return { message: 'Docente actualizado correctamente', data: teacher };
+      const hydrated = await this.teachersRepository.findOne({
+        where: { id },
+        relations: ['person', 'institution'],
+      });
+      return { message: 'Docente actualizado correctamente', data: hydrated ?? teacher };
     } catch (error) {
       throw new ErrorHandler('Ocurrio un error al actualizar el docente', 500);
     }

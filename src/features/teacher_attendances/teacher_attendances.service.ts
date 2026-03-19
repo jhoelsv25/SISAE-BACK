@@ -51,7 +51,15 @@ export class TeacherAttendancesService {
   async findTeachers() {
     try {
       const data = await this.repo.manager.query(
-        'SELECT id, teacher_code AS "teacherCode", specialization FROM teachers ORDER BY teacher_code ASC',
+        `SELECT
+          t.id,
+          t.teacher_code AS "teacherCode",
+          t.specialization,
+          p.first_name AS "firstName",
+          p.last_name AS "lastName"
+        FROM teachers t
+        LEFT JOIN persons p ON p.id = t.person_id
+        ORDER BY t.teacher_code ASC`,
       );
       return { message: 'Docentes obtenidos correctamente', data };
     } catch (error) {
