@@ -65,8 +65,136 @@ export class ClassroomService {
     return this.personFullName(teacher?.person) || 'Docente';
   }
 
-  async getFeed(sectionCourseId: string) {
+  private inferAttachmentName(url?: string) {
+    if (!url) return 'Recurso';
+
     try {
+      const normalized = url.startsWith('http') ? url : `http://local${url}`;
+      const parsed = new URL(normalized);
+      const pathname = parsed.pathname || '';
+      const lastSegment = pathname.split('/').filter(Boolean).pop();
+
+      if (lastSegment) {
+        return decodeURIComponent(lastSegment);
+      }
+
+      return parsed.hostname.replace(/^www\./, '') || 'Recurso';
+    } catch {
+      const segment = url.split('/').filter(Boolean).pop();
+      return segment || 'Recurso';
+    }
+  }
+
+  private async ensureClassroomAccess(
+    userId: string | undefined,
+    sectionCourseId: string,
+    mode: 'view' | 'publish' | 'submit' | 'review' = 'view',
+  ) {
+    if (!userId) {
+      throw new ErrorHandler('No autorizado', 401);
+    }
+
+    const [user, sectionCourse] = await Promise.all([
+      this.userRepo.findOne({
+        where: { id: userId },
+        relations: ['person', 'role'],
+      }),
+      this.sectionCourseRepo.findOne({
+        where: { id: sectionCourseId },
+        relations: ['teacher', 'teacher.person', 'section', 'academicYear'],
+      }),
+    ]);
+
+    if (!user || !sectionCourse) {
+      throw new ErrorHandler('Aula virtual no encontrada', 404);
+    }
+
+    const roleName = String(user.role?.name ?? '').toLowerCase();
+    const personId = user.person?.id;
+
+    if (roleName.includes('admin') || roleName.includes('director')) {
+      return { user, sectionCourse };
+    }
+
+    if (roleName.includes('docente') || roleName.includes('teacher')) {
+      if (!personId || sectionCourse.teacher?.person?.id !== personId) {
+        throw new ErrorHandler('No tienes acceso a esta aula virtual', 403);
+      }
+      return { user, sectionCourse };
+    }
+
+    if (roleName.includes('alumno') || roleName.includes('student')) {
+      if (mode === 'publish' || mode === 'review') {
+        throw new ErrorHandler('No tienes permisos para esta acción', 403);
+      }
+
+      const student = personId
+        ? await this.studentRepo.findOne({ where: { person: { id: personId } } })
+        : null;
+
+      if (!student) {
+        throw new ErrorHandler('No tienes acceso a esta aula virtual', 403);
+      }
+
+      const enrollment = await this.enrollmentRepo.findOne({
+        where: {
+          student: { id: student.id },
+          section: { id: sectionCourse.section?.id },
+          academicYear: { id: sectionCourse.academicYear?.id },
+        },
+      });
+
+      if (!enrollment) {
+        throw new ErrorHandler('No tienes acceso a esta aula virtual', 403);
+      }
+
+      return { user, sectionCourse };
+    }
+
+    if (roleName.includes('apoderado') || roleName.includes('guardian') || roleName.includes('tutor')) {
+      if (mode !== 'view') {
+        throw new ErrorHandler('No tienes permisos para esta acción', 403);
+      }
+
+      const guardian = personId
+        ? await this.guardianRepo.findOne({ where: { person: { id: personId } } })
+        : null;
+
+      if (!guardian) {
+        throw new ErrorHandler('No tienes acceso a esta aula virtual', 403);
+      }
+
+      const links = await this.studentGuardianRepo.find({
+        where: { guardian: { id: guardian.id } },
+        relations: ['student'],
+      });
+
+      const studentIds = links.map((link) => link.student?.id).filter(Boolean) as string[];
+      if (!studentIds.length) {
+        throw new ErrorHandler('No tienes acceso a esta aula virtual', 403);
+      }
+
+      const enrollment = await this.enrollmentRepo.findOne({
+        where: {
+          student: { id: In(studentIds) },
+          section: { id: sectionCourse.section?.id },
+          academicYear: { id: sectionCourse.academicYear?.id },
+        },
+      });
+
+      if (!enrollment) {
+        throw new ErrorHandler('No tienes acceso a esta aula virtual', 403);
+      }
+
+      return { user, sectionCourse };
+    }
+
+    throw new ErrorHandler('No tienes acceso a esta aula virtual', 403);
+  }
+
+  async getFeed(sectionCourseId: string, userId?: string) {
+    try {
+      await this.ensureClassroomAccess(userId, sectionCourseId, 'view');
       const posts = await this.postRepo.find({
         where: { sectionCourse: { id: sectionCourseId } },
         relations: ['user', 'user.person', 'comments', 'comments.user', 'comments.user.person'],
@@ -103,6 +231,11 @@ export class ClassroomService {
             date: (c as any).createdAt || new Date(),
             author: c.user?.person ? `${c.user.person.firstName} ${c.user.person.lastName}` : c.user?.username
           })),
+          metadata: {
+            attachments: p.attachmentUrl
+              ? [{ url: p.attachmentUrl, name: this.inferAttachmentName(p.attachmentUrl) }]
+              : [],
+          },
           commentsCount: p.comments.length
         })),
         ...materials.map(m => ({
@@ -143,10 +276,7 @@ export class ClassroomService {
 
   async publishPost(userId: string, sectionCourseId: string, content: string, attachmentUrl?: string) {
     try {
-      const canPublish = await this.canPublishInClassroom(userId);
-      if (!canPublish) {
-        throw new ErrorHandler('No tienes permisos para publicar en el aula', 403);
-      }
+      await this.ensureClassroomAccess(userId, sectionCourseId, 'publish');
 
       const post = this.postRepo.create({
         content,
@@ -173,8 +303,9 @@ export class ClassroomService {
     return this.mapPostToFeedItem(post);
   }
 
-  async getChatHistory(sectionCourseId: string) {
+  async getChatHistory(sectionCourseId: string, userId?: string) {
     try {
+      await this.ensureClassroomAccess(userId, sectionCourseId, 'view');
       const room = await this.roomRepo.findOne({ where: { sectionCourse: { id: sectionCourseId } } });
       if (!room) return { data: [] };
 
@@ -215,6 +346,7 @@ export class ClassroomService {
   }
 
   async sendChatMessage(userId: string, sectionCourseId: string, content: string) {
+    await this.ensureClassroomAccess(userId, sectionCourseId, 'view');
     const message = await this.saveMessage(userId, sectionCourseId, content);
     if (!message) {
       throw new ErrorHandler('Error al enviar mensaje', 500);
@@ -231,7 +363,8 @@ export class ClassroomService {
     };
   }
 
-  async getTeachers(sectionCourseId: string) {
+  async getTeachers(sectionCourseId: string, userId?: string) {
+    await this.ensureClassroomAccess(userId, sectionCourseId, 'view');
     const sectionCourse = await this.sectionCourseRepo.findOne({
       where: { id: sectionCourseId },
       relations: ['teacher', 'teacher.person'],
@@ -255,6 +388,7 @@ export class ClassroomService {
   }
 
   async getPeople(sectionCourseId: string, userId?: string) {
+    await this.ensureClassroomAccess(userId, sectionCourseId, 'view');
     const sectionCourse = await this.sectionCourseRepo.findOne({
       where: { id: sectionCourseId },
       relations: ['section', 'academicYear'],
@@ -296,6 +430,7 @@ export class ClassroomService {
   }
 
   async getTasks(sectionCourseId: string, userId?: string) {
+    await this.ensureClassroomAccess(userId, sectionCourseId, 'view');
     const sectionCourse = await this.sectionCourseRepo.findOne({
       where: { id: sectionCourseId },
       relations: ['section', 'academicYear'],
@@ -415,10 +550,7 @@ export class ClassroomService {
       linkUrl?: string;
     },
   ) {
-    const canSubmit = await this.canSubmitTask(userId);
-    if (!canSubmit) {
-      throw new ErrorHandler('No tienes permisos para entregar tareas', 403);
-    }
+    await this.ensureClassroomAccess(userId, sectionCourseId, 'submit');
 
     const enrollment = await this.getCurrentStudentEnrollment(userId, sectionCourseId);
     if (!enrollment) {
@@ -491,10 +623,7 @@ export class ClassroomService {
       feedback?: string;
     },
   ) {
-    const canReview = await this.canReviewTask(userId);
-    if (!canReview) {
-      throw new ErrorHandler('No tienes permisos para calificar entregas', 403);
-    }
+    await this.ensureClassroomAccess(userId, sectionCourseId, 'review');
 
     const submission = await this.assignmentSubmissionRepo.findOne({
       where: {
@@ -525,6 +654,7 @@ export class ClassroomService {
   }
 
   async getGrades(sectionCourseId: string, userId?: string) {
+    await this.ensureClassroomAccess(userId, sectionCourseId, 'view');
     const assessments = await this.assessmentRepo.find({
       where: { sectionCourse: { id: sectionCourseId } },
       order: { assessmentDate: 'ASC' },
@@ -633,53 +763,6 @@ export class ClassroomService {
     return [];
   }
 
-  private async canPublishInClassroom(userId?: string) {
-    if (!userId) return false;
-
-    const user = await this.userRepo.findOne({
-      where: { id: userId },
-      relations: ['role'],
-    });
-
-    const roleName = String(user?.role?.name ?? '').toLowerCase();
-
-    return (
-      roleName.includes('admin') ||
-      roleName.includes('director') ||
-      roleName.includes('docente') ||
-      roleName.includes('teacher')
-    );
-  }
-
-  private async canSubmitTask(userId?: string) {
-    if (!userId) return false;
-
-    const user = await this.userRepo.findOne({
-      where: { id: userId },
-      relations: ['role'],
-    });
-
-    const roleName = String(user?.role?.name ?? '').toLowerCase();
-    return roleName.includes('alumno') || roleName.includes('student');
-  }
-
-  private async canReviewTask(userId?: string) {
-    if (!userId) return false;
-
-    const user = await this.userRepo.findOne({
-      where: { id: userId },
-      relations: ['role'],
-    });
-
-    const roleName = String(user?.role?.name ?? '').toLowerCase();
-    return (
-      roleName.includes('admin') ||
-      roleName.includes('director') ||
-      roleName.includes('docente') ||
-      roleName.includes('teacher')
-    );
-  }
-
   private async getCurrentStudentEnrollment(userId: string | undefined, sectionCourseId: string) {
     if (!userId) return null;
 
@@ -759,7 +842,9 @@ export class ClassroomService {
       date: post.createdAt || new Date(),
       attachmentUrl: post.attachmentUrl,
       metadata: {
-        attachments: post.attachmentUrl ? [{ url: post.attachmentUrl, name: 'Adjunto' }] : [],
+        attachments: post.attachmentUrl
+          ? [{ url: post.attachmentUrl, name: this.inferAttachmentName(post.attachmentUrl) }]
+          : [],
       },
       author: {
         name: this.userDisplay(post.user),

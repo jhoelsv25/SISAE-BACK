@@ -13,7 +13,6 @@ import { StudentGuardianEntity } from '../student_guardians/entities/student_gua
 import { StudentEntity } from '../students/entities/student.entity';
 import { UserEntity } from '../users/entities/user.entity';
 import { SectionCourseEntity } from '../section-course/entities/section-course.entity';
-import { ClassroomUploadsController } from './classroom-uploads.controller';
 import { ClassroomController } from './classroom.controller';
 import { ClassroomGateway } from './classroom.gateway';
 import { ClassroomService } from './classroom.service';
@@ -40,7 +39,7 @@ import { ClassroomPostEntity } from './entities/classroom-post.entity';
       SectionCourseEntity,
     ]),
   ],
-  controllers: [ClassroomController, ClassroomUploadsController],
+  controllers: [ClassroomController],
   providers: [ClassroomService, ClassroomGateway],
   exports: [ClassroomService],
 })

@@ -69,7 +69,8 @@ export class ClassroomGateway implements OnGatewayInit, OnGatewayConnection, OnG
   }
 
   @SubscribeMessage('joinRoom')
-  handleJoinRoom(@ConnectedSocket() client: Socket, @MessageBody() room: string) {
+  async handleJoinRoom(@ConnectedSocket() client: Socket, @MessageBody() room: string) {
+    await this.classroomService.getFeed(room, client.data.user?.sub);
     client.join(room);
     this.logger.log(`Client ${client.id} joined room: ${room}`);
   }

@@ -8,20 +8,22 @@ const SectionCourseIdParam = () => Param('sectionCourseId', new ParseUUIDPipe({ 
 export class ClassroomController {
   constructor(private readonly classroomService: ClassroomService) {}
 
+  @UseGuards(JwtAuthGuard)
   @Get('feed/:sectionCourseId')
-  getFeed(@SectionCourseIdParam() sectionId: string) {
-    return this.classroomService.getFeed(sectionId);
+  getFeed(@Request() req: any, @SectionCourseIdParam() sectionId: string) {
+    return this.classroomService.getFeed(sectionId, req.user?.id);
   }
 
+  @UseGuards(JwtAuthGuard)
   @Get('chat/:sectionCourseId')
-  getChat(@SectionCourseIdParam() sectionId: string) {
-    return this.classroomService.getChatHistory(sectionId);
+  getChat(@Request() req: any, @SectionCourseIdParam() sectionId: string) {
+    return this.classroomService.getChatHistory(sectionId, req.user?.id);
   }
 
   @UseGuards(JwtAuthGuard)
   @Get(':sectionCourseId/teachers')
-  getTeachers(@SectionCourseIdParam() sectionId: string) {
-    return this.classroomService.getTeachers(sectionId);
+  getTeachers(@Request() req: any, @SectionCourseIdParam() sectionId: string) {
+    return this.classroomService.getTeachers(sectionId, req.user?.id);
   }
 
   @UseGuards(JwtAuthGuard)
@@ -83,7 +85,10 @@ export class ClassroomController {
 
   @UseGuards(JwtAuthGuard)
   @Post('publish')
-  publish(@Request() req: any, @Body() body: { sectionCourseId: string; content: string; attachmentUrl?: string }) {
+  publish(
+    @Request() req: any,
+    @Body() body: { sectionCourseId: string; content: string; attachmentUrl?: string },
+  ) {
     const userId = req.user.id;
     return this.classroomService.publishPost(userId, body.sectionCourseId, body.content, body.attachmentUrl);
   }
