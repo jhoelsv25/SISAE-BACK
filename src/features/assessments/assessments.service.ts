@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ErrorHandler } from '../../common/exceptions';
@@ -11,6 +12,7 @@ export class AssessmentsService {
   constructor(
     @InjectRepository(AssessmentEntity)
     private readonly repo: Repository<AssessmentEntity>,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   async create(dto: CreateAssessmentDto) {
@@ -22,6 +24,12 @@ export class AssessmentsService {
         sectionCourse: { id: dto.sectionCourse }, // Adjust if dto.sectionCourse is not the id
       });
       await this.repo.save(assessment);
+      this.eventEmitter.emit('assessments.created', {
+        id: assessment.id,
+        name: assessment.name,
+        description: assessment.description ?? null,
+        sectionCourseId: dto.sectionCourse,
+      });
       return { message: 'Assessment creado correctamente', data: assessment };
     } catch (error) {
       throw new ErrorHandler('Ocurrió un error al crear la assessment', 500);

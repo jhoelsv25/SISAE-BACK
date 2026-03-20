@@ -4,4 +4,5 @@ export class FilterNotificationDto extends FilterBaseDto {
   title?: string;
   content?: string;
   recipientId?: string;
+  isRead?: boolean;
 }

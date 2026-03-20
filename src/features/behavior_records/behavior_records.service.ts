@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ErrorHandler } from '../../common/exceptions';
@@ -11,6 +12,7 @@ export class BehaviorRecordsService {
   constructor(
     @InjectRepository(BehaviorRecordEntity)
     private readonly repo: Repository<BehaviorRecordEntity>,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   async create(dto: CreateBehaviorRecordDto) {
@@ -23,6 +25,13 @@ export class BehaviorRecordsService {
         teacher: dto.teacher ? { id: dto.teacher } : undefined,
       });
       await this.repo.save(behaviorRecord);
+      this.eventEmitter.emit('behavior.created', {
+        id: behaviorRecord.id,
+        studentId: dto.student,
+        category: behaviorRecord.category,
+        description: behaviorRecord.description,
+        guardianNotified: behaviorRecord.guardianNotified,
+      });
       return { message: 'Behavior record creado correctamente', data: behaviorRecord };
     } catch (error) {
       throw new ErrorHandler('Ocurrió un error al crear el behavior record', 500);

@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ErrorHandler } from '../../common/exceptions';
@@ -11,6 +12,7 @@ export class AssigmentsService {
   constructor(
     @InjectRepository(AssigmentEntity)
     private readonly repo: Repository<AssigmentEntity>,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   async create(dto: CreateAssigmentDto) {
@@ -22,6 +24,13 @@ export class AssigmentsService {
         module: dto.module ? { id: dto.module } : undefined,
       });
       await this.repo.save(assigment);
+      this.eventEmitter.emit('assignments.published', {
+        id: assigment.id,
+        title: assigment.title,
+        description: assigment.description ?? null,
+        sectionCourseId: dto.sectionCourse,
+        status: assigment.status,
+      });
       return { message: 'Asignación creada correctamente', data: assigment };
     } catch (error) {
       throw new ErrorHandler('Ocurrió un error al crear el assigment', 500);
@@ -62,6 +71,13 @@ export class AssigmentsService {
         module: dto.module ? { id: dto.module } : undefined,
       });
       await this.repo.save(assigment);
+      this.eventEmitter.emit('assignments.published', {
+        id: assigment.id,
+        title: assigment.title,
+        description: assigment.description ?? null,
+        sectionCourseId: dto.sectionCourse ?? assigment.sectionCourse?.id,
+        status: assigment.status,
+      });
       return { message: 'Asignación actualizada correctamente', data: assigment };
     } catch (error) {
       throw new ErrorHandler('Ocurrió un error al actualizar la asignación', 500);

@@ -32,6 +32,7 @@ import { PeriodsModule } from './periods/periods.module';
 import { PermissionsModule } from './permissions/permissions.module';
 import { PersonsModule } from './persons/persons.module';
 import { RolesModule } from './roles/roles.module';
+import { ReportsModule } from './reports/reports.module';
 import { SchedulesModule } from './schedules/schedules.module';
 import { SectionCourseModule } from './section-course/section-course.module';
 import { SectionsModule } from './sections/sections.module';
@@ -93,6 +94,7 @@ import { VirtualClassroomsModule } from './virtual_classrooms/virtual_classrooms
     SubjectAreaModule,
     ClassroomModule,
     DashboardModule,
+    ReportsModule,
   ],
   controllers: [],
   providers: [],

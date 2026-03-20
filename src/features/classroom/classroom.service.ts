@@ -53,6 +53,18 @@ export class ClassroomService {
     private readonly sectionCourseRepo: Repository<SectionCourseEntity>,
   ) {}
 
+  private personFullName(person?: { firstName?: string; lastName?: string } | null) {
+    return [person?.firstName, person?.lastName].filter(Boolean).join(' ').trim();
+  }
+
+  private userDisplay(user?: UserEntity | null) {
+    return this.personFullName(user?.person) || user?.username || 'Usuario';
+  }
+
+  private teacherDisplay(teacher?: { person?: { firstName?: string; lastName?: string; photoUrl?: string } } | null) {
+    return this.personFullName(teacher?.person) || 'Docente';
+  }
+
   async getFeed(sectionCourseId: string) {
     try {
       const posts = await this.postRepo.find({
@@ -63,11 +75,13 @@ export class ClassroomService {
 
       const materials = await this.materialRepo.find({
         where: { sectionCourse: { id: sectionCourseId } },
+        relations: ['teacher', 'teacher.person'],
         order: { id: 'DESC' },
       });
 
       const assignments = await this.assignmentRepo.find({
         where: { sectionCourse: { id: sectionCourseId } },
+        relations: ['teacher', 'teacher.person'],
         order: { id: 'DESC' },
       });
 
@@ -79,8 +93,9 @@ export class ClassroomService {
           date: (p as any).createdAt || new Date(),
           attachmentUrl: p.attachmentUrl,
           author: { 
-            name: p.user?.person ? `${p.user.person.firstName} ${p.user.person.lastName}` : p.user?.username, 
-            role: 'Docente' 
+            name: this.userDisplay(p.user),
+            avatar: p.user?.person?.photoUrl || undefined,
+            role: p.user?.role?.name || 'Publicacion',
           },
           comments: p.comments.map(c => ({
             id: c.id,
@@ -97,7 +112,11 @@ export class ClassroomService {
           content: m.description,
           date: (m as any).createdAt || new Date(),
           url: m.url,
-          author: { name: 'Docente', role: 'Material' },
+          author: {
+            name: this.teacherDisplay(m.teacher),
+            avatar: m.teacher?.person?.photoUrl || undefined,
+            role: 'Material',
+          },
           commentsCount: 0
         })),
         ...assignments.map(a => ({
@@ -105,9 +124,13 @@ export class ClassroomService {
           type: 'assignment',
           title: a.title,
           content: a.description,
-          date: (a as any).createdAt || new Date(),
+          date: a.assignedDate || (a as any).createdAt || new Date(),
           dueDate: a.dueDate,
-          author: { name: 'Sistema', role: 'Tarea' },
+          author: {
+            name: this.teacherDisplay(a.teacher),
+            avatar: a.teacher?.person?.photoUrl || undefined,
+            role: 'Tarea',
+          },
           commentsCount: 0
         }))
       ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
@@ -225,6 +248,8 @@ export class ClassroomService {
         firstName: teacher.person.firstName,
         lastName: teacher.person.lastName,
         email: teacher.person.email,
+        photoUrl: teacher.person.photoUrl,
+        role: 'Docente',
       },
     ];
   }
@@ -264,6 +289,8 @@ export class ClassroomService {
           ? `${enrollment.student.person.firstName} ${enrollment.student.person.lastName}`
           : enrollment.student?.studentCode ?? 'Estudiante',
         code: enrollment.student?.studentCode ?? '',
+        photoUrl: enrollment.student?.person?.photoUrl ?? '',
+        status: enrollment.status,
       })),
     };
   }
@@ -523,8 +550,12 @@ export class ClassroomService {
       return {
         id: assessment.id,
         name: assessment.name,
+        description: assessment.description,
         date: assessment.assessmentDate,
         total: assessment.maxScore,
+        type: assessment.type,
+        status: assessment.status,
+        weightPercentage: assessment.weightPercentage,
         average: Number(average.toFixed(2)),
         studentsCount: relatedScores.length,
         scores: relatedScores.map((score) => ({
@@ -533,6 +564,8 @@ export class ClassroomService {
           studentName: score.enrollment?.student?.person
             ? `${score.enrollment.student.person.firstName} ${score.enrollment.student.person.lastName}`
             : score.enrollment?.student?.studentCode || 'Estudiante',
+          studentCode: score.enrollment?.student?.studentCode || '',
+          studentPhotoUrl: score.enrollment?.student?.person?.photoUrl || '',
           score: Number(score.score),
           observation: score.observation,
         })),
@@ -709,12 +742,11 @@ export class ClassroomService {
     return {
       id: message?.id,
       senderId: message?.user?.id,
-      senderName: message?.user?.person
-        ? `${message.user.person.firstName} ${message.user.person.lastName}`
-        : message?.user?.username,
+      senderName: this.userDisplay(message?.user),
+      senderAvatar: message?.user?.person?.photoUrl || undefined,
       content: message?.content,
       isMe: false,
-      timestamp: message?.createdAt ? new Date(message.createdAt).toLocaleTimeString() : 'N/A',
+      timestamp: message?.createdAt ? new Date(message.createdAt).toISOString() : '',
     };
   }
 
@@ -730,8 +762,9 @@ export class ClassroomService {
         attachments: post.attachmentUrl ? [{ url: post.attachmentUrl, name: 'Adjunto' }] : [],
       },
       author: {
-        name: post.user?.person ? `${post.user.person.firstName} ${post.user.person.lastName}` : post.user?.username,
-        role: 'Docente',
+        name: this.userDisplay(post.user),
+        avatar: post.user?.person?.photoUrl || undefined,
+        role: post.user?.role?.name || 'Publicacion',
       },
       comments: post.comments.map((comment) => ({
         id: comment.id,

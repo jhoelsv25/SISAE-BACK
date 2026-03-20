@@ -1,7 +1,8 @@
 import { BaseEntity } from '@common/entities/base.entity';
 import { PriorityType } from '@common/enums/global.enum';
 import { NotificationType } from '@features/notifications/enums/notification.enum';
-import { Column, Entity } from 'typeorm';
+import { Column, Entity, OneToMany } from 'typeorm';
+import { NotificationRecipientEntity } from './notification-recipient.entity';
 
 @Entity({ name: 'notifications' })
 export class NotificationEntity extends BaseEntity {
@@ -30,4 +31,7 @@ export class NotificationEntity extends BaseEntity {
 
   @Column({ type: 'varchar', length: 36 })
   recipientId: string;
+
+  @OneToMany(() => NotificationRecipientEntity, recipient => recipient.notification)
+  recipients?: NotificationRecipientEntity[];
 }

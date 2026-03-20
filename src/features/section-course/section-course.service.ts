@@ -2,9 +2,12 @@ import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ErrorHandler } from '../../common/exceptions';
+import { StatusType } from '../../common/enums/global.enum';
 import { CreateSectionCourseDto } from './dto/create-section-course.dto';
 import { UpdateSectionCourseDto } from './dto/update-section-course.dto';
 import { SectionCourseEntity } from './entities/section-course.entity';
+import { VirtualClassroomEntity } from '../virtual_classrooms/entities/virtual_classroom.entity';
+import { PlatformType, VirtualClassroomType } from '../virtual_classrooms/enums/virtual_classroom.enum';
 
 @Injectable()
 export class SectionCourseService {
@@ -13,7 +16,31 @@ export class SectionCourseService {
   constructor(
     @InjectRepository(SectionCourseEntity)
     private readonly repo: Repository<SectionCourseEntity>,
+    @InjectRepository(VirtualClassroomEntity)
+    private readonly virtualClassroomRepo: Repository<VirtualClassroomEntity>,
   ) {}
+
+  private async ensureVirtualClassroom(sectionCourseId: string): Promise<void> {
+    const existing = await this.virtualClassroomRepo.findOne({
+      where: { sectionCourse: { id: sectionCourseId } },
+      relations: { sectionCourse: true },
+    });
+
+    if (existing) return;
+
+    const classroom = this.virtualClassroomRepo.create({
+      platform: PlatformType.GOOGLE_MEET,
+      accessUrl: `/virtual-classroom/${sectionCourseId}`,
+      type: VirtualClassroomType.LECTURE,
+      status: StatusType.ACTIVE,
+      sectionCourse: { id: sectionCourseId },
+      settings: {
+        autoProvisioned: true,
+      },
+    });
+
+    await this.virtualClassroomRepo.save(classroom);
+  }
 
   async create(dto: CreateSectionCourseDto) {
     try {
@@ -26,6 +53,7 @@ export class SectionCourseService {
         teacher: teacher ? { id: teacher } : undefined,
       });
       const saved = await this.repo.save(sectionCourse);
+      await this.ensureVirtualClassroom(saved.id);
       const hydrated = await this.repo.findOne({
         where: { id: saved.id },
         relations: {
@@ -99,6 +127,7 @@ export class SectionCourseService {
       if (course !== undefined) payload.course = course ? { id: course } : undefined;
       if (teacher !== undefined) payload.teacher = teacher ? { id: teacher } : null;
       await this.repo.update(id, payload);
+      await this.ensureVirtualClassroom(id);
       const updatedSectionCourse = await this.repo.findOne({
         where: { id },
         relations: {

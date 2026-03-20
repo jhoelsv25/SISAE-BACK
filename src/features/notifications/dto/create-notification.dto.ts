@@ -2,12 +2,14 @@ import { PriorityType } from '@common/enums/global.enum';
 import { ApiProperty } from '@nestjs/swagger';
 import {
   IsBoolean,
+  IsArray,
   IsDateString,
   IsEnum,
   IsNotEmpty,
   IsOptional,
   IsString,
   IsUUID,
+  ArrayUnique,
 } from 'class-validator';
 import { NotificationType } from '../enums/notification.enum';
 
@@ -75,4 +77,16 @@ export class CreateNotificationDto {
   })
   @IsUUID('4', { message: 'El destinatario debe ser un UUID válido.' })
   recipientId: string;
+
+  @ApiProperty({
+    example: ['a1b2c3d4-5e6f-7a8b-9c0d-1e2f3a4b5c6d'],
+    description: 'IDs de destinatarios para fanout',
+    required: false,
+    type: [String],
+  })
+  @IsOptional()
+  @IsArray({ message: 'recipientIds debe ser un arreglo.' })
+  @ArrayUnique({ message: 'recipientIds no debe tener duplicados.' })
+  @IsUUID('4', { each: true, message: 'Cada destinatario debe ser un UUID válido.' })
+  recipientIds?: string[];
 }
