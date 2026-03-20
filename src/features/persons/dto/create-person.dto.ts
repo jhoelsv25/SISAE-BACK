@@ -7,6 +7,15 @@ export class CreatePersonDto {
   @IsEnum(DocumentType, { message: 'El tipo de documento debe ser uno de: dni, passport, other.' })
   documentType: DocumentType;
 
+  @ApiProperty({
+    example: '12345678',
+    description: 'Número de documento',
+    required: false,
+  })
+  @IsOptional()
+  @IsString({ message: 'El número de documento debe ser una cadena de texto.' })
+  documentNumber?: string;
+
   @ApiProperty({ example: 'Juan', description: 'Nombres de la persona' })
   @IsString({ message: 'El nombre debe ser una cadena de texto.' })
   @IsNotEmpty({ message: 'El nombre es obligatorio.' })

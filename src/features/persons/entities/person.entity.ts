@@ -8,6 +8,9 @@ export class PersonEntity extends BaseEntity {
   @Column({ type: 'enum', enum: DocumentType })
   documentType: DocumentType;
 
+  @Column({ type: 'varchar', length: 30, nullable: true })
+  documentNumber?: string;
+
   @Column({ type: 'varchar', length: 100 })
   firstName: string;
 
