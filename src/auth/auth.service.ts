@@ -252,6 +252,7 @@ export class AuthService {
           firstName: user.person.firstName,
           lastName: user.person.lastName,
           documentType: user.person.documentType,
+          documentNumber: user.person.documentNumber,
           birthDate: user.person.birthDate,
           gender: user.person.gender,
           birthPlace: user.person.birthPlace,
