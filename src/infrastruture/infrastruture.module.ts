@@ -6,9 +6,10 @@ import { EventsModule } from './events/events.module';
 import { RedisModule } from './redis/redis.module';
 import { RedisService } from './redis/redis.service';
 import { SocketModule } from './sockets/socket.module';
+import { UploadsModule } from './uploads/uploads.module';
 
 @Module({
-  imports: [RedisModule, CacheModule, AppBullmqModule, EventsModule, SocketModule],
+  imports: [RedisModule, CacheModule, AppBullmqModule, EventsModule, SocketModule, UploadsModule],
   providers: [RedisService, CacheService],
   exports: [RedisService, CacheService],
 })
