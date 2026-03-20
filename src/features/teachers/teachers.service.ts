@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { FindOptionsWhere, Repository } from 'typeorm';
 import { ErrorHandler } from '../../common/exceptions';
 import { PaginatedResponse, Response } from '../../common/types/global.types';
+import { PersonEntity } from '../persons/entities/person.entity';
 import { CreateTeacherDto } from './dto/create-teacher.dto';
 import { FilterTeacherDto } from './dto/filter-teacher.dto';
 import { UpdateTeacherDto } from './dto/update-teacher.dto';
@@ -13,17 +14,22 @@ export class TeachersService {
   constructor(
     @InjectRepository(TeacherEntity)
     private readonly teachersRepository: Repository<TeacherEntity>,
+    @InjectRepository(PersonEntity)
+    private readonly personsRepository: Repository<PersonEntity>,
   ) {}
 
   async create(dto: CreateTeacherDto): Promise<Response<TeacherEntity>> {
     try {
-      const { institution, person, ...restDto } = dto;
+      const { institution, person, photoUrl, ...restDto } = dto;
       const teacher = this.teachersRepository.create({
         ...restDto,
         institution: institution ? { id: institution } : undefined,
         person: person ? { id: person } : undefined,
       });
       const saved = await this.teachersRepository.save(teacher);
+      if (person && photoUrl) {
+        await this.personsRepository.update(person, { photoUrl });
+      }
       const hydrated = await this.teachersRepository.findOne({
         where: { id: saved.id },
         relations: ['person', 'institution'],
@@ -101,13 +107,17 @@ export class TeachersService {
       if (!teacher) {
         throw new ErrorHandler('Docente no encontrado', 404);
       }
-      const { institution, person, ...restDto } = dto;
+      const { institution, person, photoUrl, ...restDto } = dto;
       this.teachersRepository.merge(teacher, {
         ...restDto,
         institution: institution ? { id: institution } : undefined,
         person: person ? { id: person } : undefined,
       });
       await this.teachersRepository.save(teacher);
+      const personId = person || (teacher.person as unknown as { id?: string } | undefined)?.id;
+      if (personId && photoUrl) {
+        await this.personsRepository.update(personId, { photoUrl });
+      }
       const hydrated = await this.teachersRepository.findOne({
         where: { id },
         relations: ['person', 'institution'],

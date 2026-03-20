@@ -114,4 +114,13 @@ export class CreateTeacherDto {
   @IsString({ message: 'El ID de la persona debe ser una cadena UUID.' })
   @IsUUID('4', { message: 'El ID de la persona debe ser un UUID válido.' })
   person: string;
+
+  @ApiProperty({
+    example: 'https://localhost:3000/uploads/persons/t20250001.jpg',
+    description: 'URL de la foto de la persona vinculada.',
+    required: false,
+  })
+  @IsOptional()
+  @IsString({ message: 'La foto debe ser una URL de texto válida.' })
+  photoUrl?: string;
 }
