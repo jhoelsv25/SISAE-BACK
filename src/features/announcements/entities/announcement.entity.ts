@@ -1,8 +1,9 @@
 import { BaseEntity } from '@common/entities/base.entity';
 import { PriorityType } from '@common/enums/global.enum';
 import { GradeEntity } from '@features/grades/entities/grade.entity';
+import { SectionEntity } from '@features/sections/entities/section.entity';
 import { UserEntity } from '@features/users/entities/user.entity';
-import { Column, Entity, ManyToOne } from 'typeorm';
+import { Column, Entity, JoinColumn, ManyToOne } from 'typeorm';
 import { AnnouncementStatus, RecipientType } from '../enums/announcement.enum';
 
 @Entity({ name: 'announcements' })
@@ -27,10 +28,16 @@ export class AnnouncementEntity extends BaseEntity {
   status: AnnouncementStatus;
   @Column({ type: 'int' })
   view: number;
+  @Column({ type: 'int', default: 0 })
+  resolvedRecipientCount: number;
 
   @ManyToOne(() => UserEntity)
   user: UserEntity;
 
   @ManyToOne(() => GradeEntity)
   grade: GradeEntity;
+
+  @ManyToOne(() => SectionEntity, { nullable: true })
+  @JoinColumn({ name: 'sectionId' })
+  section?: SectionEntity | null;
 }

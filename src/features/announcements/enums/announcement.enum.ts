@@ -1,6 +1,7 @@
 export enum RecipientType {
   STUDENTS = 'students',
   TEACHERS = 'teachers',
+  GUARDIANS = 'guardians',
   ALL = 'all',
 }
 

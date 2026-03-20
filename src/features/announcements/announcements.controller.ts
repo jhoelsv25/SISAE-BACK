@@ -1,15 +1,18 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common';
+import { JwtAuthGuard } from '@auth/guards/jwt-auth.guard';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Req, UseGuards } from '@nestjs/common';
+import { Request } from 'express';
 import { AnnouncementsService } from './announcements.service';
 import { CreateAnnouncementDto } from './dto/create-announcement.dto';
 import { UpdateAnnouncementDto } from './dto/update-announcement.dto';
 
+@UseGuards(JwtAuthGuard)
 @Controller('announcements')
 export class AnnouncementsController {
   constructor(private readonly announcementsService: AnnouncementsService) {}
 
   @Post()
-  create(@Body() dto: CreateAnnouncementDto) {
-    return this.announcementsService.create(dto);
+  create(@Body() dto: CreateAnnouncementDto, @Req() req: Request) {
+    return this.announcementsService.create(dto, req.user as { id?: string } | undefined);
   }
 
   @Get()
@@ -23,8 +26,8 @@ export class AnnouncementsController {
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() dto: UpdateAnnouncementDto) {
-    return this.announcementsService.update(id, dto);
+  update(@Param('id') id: string, @Body() dto: UpdateAnnouncementDto, @Req() req: Request) {
+    return this.announcementsService.update(id, dto, req.user as { id?: string } | undefined);
   }
 
   @Delete(':id')

@@ -76,7 +76,9 @@ export class CreateAnnouncementDto {
   @ApiProperty({
     example: 'b3e1c2d4-5f6a-4a7b-8c9d-0e1f2a3b4c5d',
     description: 'ID del usuario creador (UUID)',
+    required: false,
   })
+  @IsOptional()
   @IsUUID('4', { message: 'El usuario debe ser un UUID válido.' })
   user: string;
 
@@ -88,4 +90,13 @@ export class CreateAnnouncementDto {
   @IsOptional()
   @IsUUID('4', { message: 'El grado debe ser un UUID válido.' })
   grade?: string;
+
+  @ApiProperty({
+    example: 'd9f55b07-1111-4b1a-9fcb-9e31ef0d1f0f',
+    description: 'ID de la sección (UUID)',
+    required: false,
+  })
+  @IsOptional()
+  @IsUUID('4', { message: 'La sección debe ser un UUID válido.' })
+  section?: string;
 }
