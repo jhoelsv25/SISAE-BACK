@@ -9,8 +9,10 @@ import { NestFactory, Reflector } from '@nestjs/core';
 import { SwaggerModule } from '@nestjs/swagger';
 import * as compression from 'compression';
 import * as cookieParser from 'cookie-parser';
+import * as express from 'express';
 import rateLimit from 'express-rate-limit';
 import helmet from 'helmet';
+import { resolve } from 'path';
 import { DataSource } from 'typeorm';
 import { AppModule } from './app.module';
 import { GlobalExceptionFilter } from './common/exceptions/http-exception.filter';
@@ -41,8 +43,14 @@ async function bootstrap() {
 
   // Middlewares globales
   app.use(cookieParser());
-  app.use(helmet({ contentSecurityPolicy: true }));
+  app.use(
+    helmet({
+      contentSecurityPolicy: true,
+      crossOriginResourcePolicy: { policy: 'cross-origin' },
+    }),
+  );
   app.use(compression());
+  app.use('/uploads', express.static(resolve(__dirname, '../uploads')));
   app.enableCors(corsConfig(configService));
 
   // Rate limiting por IP (100 requests/minuto)
