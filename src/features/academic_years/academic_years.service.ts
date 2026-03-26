@@ -7,6 +7,7 @@ import { PeriodEntity } from '../periods/entities/period.entity';
 import { CreateAcademicYearWithPeriodsDto } from './dto/create-academic-year-with-periods.dto';
 import { CreateAcademicYearDto } from './dto/create-academic_year.dto';
 import { UpdateAcademicYearDto } from './dto/update-academic_year.dto';
+import { AcademicYearGradeScaleEntity } from './entities/academic_year_grade_scale.entity';
 import { AcademicYearEntity } from './entities/academic_year.entity';
 
 @Injectable()
@@ -16,6 +17,24 @@ export class AcademicYearService {
     private readonly repo: Repository<AcademicYearEntity>,
     private readonly dataSource: DataSource,
   ) {}
+
+  private buildGradeScales(
+    manager: EntityManager,
+    academicYear: AcademicYearEntity,
+    gradeScales: Array<{ label: string; minScore: number; maxScore: number; orderIndex?: number }> = [],
+  ) {
+    return gradeScales
+      .filter((scale) => scale.label?.trim())
+      .map((scale, index) =>
+        manager.getRepository(AcademicYearGradeScaleEntity).create({
+          label: scale.label.trim(),
+          minScore: Number(scale.minScore),
+          maxScore: Number(scale.maxScore),
+          orderIndex: Number(scale.orderIndex ?? index + 1),
+          academicYear,
+        }),
+      );
+  }
 
   private normalizeDate(value: string | Date): Date {
     return value instanceof Date ? value : new Date(value);
@@ -60,6 +79,16 @@ export class AcademicYearService {
           name: entity.institution.name,
         }
       : undefined;
+
+    (entity as any).gradeScales = (entity.gradeScales ?? [])
+      .sort((a, b) => Number(a.orderIndex) - Number(b.orderIndex))
+      .map((scale) => ({
+        id: scale.id,
+        label: scale.label,
+        minScore: Number(scale.minScore),
+        maxScore: Number(scale.maxScore),
+        orderIndex: scale.orderIndex,
+      }));
 
     return entity;
   }
@@ -139,7 +168,7 @@ export class AcademicYearService {
           return ErrorHandler.conflict(`El año académico ${dto.year} ya existe`, 'AcademicYear');
         }
 
-        const { periodCount, ...yearDto } = dto;
+        const { periodCount, gradeScales, ...yearDto } = dto;
         const entity = manager.getRepository(AcademicYearEntity).create({
           ...yearDto,
           institution: dto.institution ? { id: dto.institution } : undefined,
@@ -151,9 +180,16 @@ export class AcademicYearService {
           await manager.getRepository(PeriodEntity).save(periods);
         }
 
+        if (gradeScales?.length) {
+          const scales = this.buildGradeScales(manager, savedYear, gradeScales);
+          if (scales.length) {
+            await manager.getRepository(AcademicYearGradeScaleEntity).save(scales);
+          }
+        }
+
         const hydratedYear = await manager.getRepository(AcademicYearEntity).findOne({
           where: { id: savedYear.id },
-          relations: ['periods', 'institution'],
+          relations: ['periods', 'institution', 'gradeScales'],
         });
 
         return this.serializeAcademicYear(hydratedYear ?? savedYear) as AcademicYearEntity;
@@ -167,7 +203,7 @@ export class AcademicYearService {
     try {
       const years = await this.repo.find({
         order: { year: 'DESC' },
-        relations: ['periods', 'institution'],
+        relations: ['periods', 'institution', 'gradeScales'],
       });
       return years.map((year) => this.serializeAcademicYear(year) as AcademicYearEntity);
     } catch (error) {
@@ -179,7 +215,7 @@ export class AcademicYearService {
     try {
       const entity = await this.repo.findOne({
         where: { id },
-        relations: ['periods', 'institution'],
+        relations: ['periods', 'institution', 'gradeScales'],
       });
       if (!entity) {
         return ErrorHandler.notFound('Año académico no encontrado', 'AcademicYear');
@@ -192,13 +228,44 @@ export class AcademicYearService {
 
   async update(id: string, dto: UpdateAcademicYearDto): Promise<AcademicYearEntity> {
     try {
-      const entity = await this.findOne(id);
-      Object.assign(entity, {
-        ...dto,
-        institution: dto.institution ? { id: dto.institution } : entity.institution,
+      return await this.dataSource.transaction(async manager => {
+        const entity = await manager.getRepository(AcademicYearEntity).findOne({
+          where: { id },
+          relations: ['institution', 'gradeScales'],
+        });
+
+        if (!entity) {
+          return ErrorHandler.notFound('Año académico no encontrado', 'AcademicYear');
+        }
+
+        Object.assign(entity, {
+          ...dto,
+          institution: dto.institution ? { id: dto.institution } : entity.institution,
+        });
+
+        await manager.getRepository(AcademicYearEntity).save(entity);
+
+        if (dto.gradeScales) {
+          await manager
+            .createQueryBuilder()
+            .delete()
+            .from(AcademicYearGradeScaleEntity)
+            .where(`"academic_year_id" = :id`, { id })
+            .execute();
+
+          const nextScales = this.buildGradeScales(manager, entity, dto.gradeScales);
+          if (nextScales.length) {
+            await manager.getRepository(AcademicYearGradeScaleEntity).save(nextScales);
+          }
+        }
+
+        const hydrated = await manager.getRepository(AcademicYearEntity).findOne({
+          where: { id },
+          relations: ['periods', 'institution', 'gradeScales'],
+        });
+
+        return this.serializeAcademicYear(hydrated ?? entity) as AcademicYearEntity;
       });
-      await this.repo.save(entity);
-      return await this.findOne(id);
     } catch (error) {
       return ErrorHandler.handleUnknownError(error, 'Error al actualizar año académico');
     }

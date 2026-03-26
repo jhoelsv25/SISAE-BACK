@@ -7,6 +7,7 @@ import {
 import { InstitutionEntity } from '@features/institution/entities/institution.entity';
 import { PeriodEntity } from '@features/periods/entities/period.entity';
 import { Column, Entity, ManyToOne, OneToMany } from 'typeorm';
+import { AcademicYearGradeScaleEntity } from './academic_year_grade_scale.entity';
 
 @Entity('academic_years')
 export class AcademicYearEntity extends BaseEntity {
@@ -53,6 +54,9 @@ export class AcademicYearEntity extends BaseEntity {
 
   @OneToMany(() => PeriodEntity, period => period.academicYear)
   periods: PeriodEntity[];
+
+  @OneToMany(() => AcademicYearGradeScaleEntity, scale => scale.academicYear)
+  gradeScales: AcademicYearGradeScaleEntity[];
 
   @ManyToOne(() => InstitutionEntity)
   institution: InstitutionEntity;

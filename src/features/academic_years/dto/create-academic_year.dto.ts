@@ -1,6 +1,26 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsDateString, IsEnum, IsInt, IsOptional, IsString, IsUUID, MaxLength, Min } from 'class-validator';
+import { Type } from 'class-transformer';
+import { IsArray, IsDateString, IsEnum, IsInt, IsOptional, IsString, IsUUID, MaxLength, Min, ValidateNested } from 'class-validator';
 import { AcademicYearStatus, GradingSystem, Modality } from '../enums/academic_year.enum';
+
+export class AcademicYearGradeScaleDto {
+  @ApiProperty({ example: 'A', description: 'Etiqueta literal de la escala.' })
+  @IsString()
+  @MaxLength(20)
+  label: string;
+
+  @ApiProperty({ example: 18, description: 'Valor mínimo del rango.' })
+  minScore: number;
+
+  @ApiProperty({ example: 20, description: 'Valor máximo del rango.' })
+  maxScore: number;
+
+  @ApiProperty({ example: 1, description: 'Orden visual de la escala.' })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  orderIndex?: number;
+}
 
 export class CreateAcademicYearDto {
   @ApiProperty({ example: 2025, description: 'Año académico.' })
@@ -87,4 +107,15 @@ export class CreateAcademicYearDto {
   @IsInt({ message: 'La cantidad de periodos debe ser un número entero.' })
   @Min(0, { message: 'La cantidad de periodos no puede ser negativa.' })
   periodCount?: number;
+
+  @ApiProperty({
+    required: false,
+    type: [AcademicYearGradeScaleDto],
+    description: 'Escala de equivalencias cuando el sistema de calificación es literal.',
+  })
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => AcademicYearGradeScaleDto)
+  gradeScales?: AcademicYearGradeScaleDto[];
 }
