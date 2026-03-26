@@ -4,7 +4,7 @@ import { AcademicYearEntity } from '@features/academic_years/entities/academic_y
 import { EnrollmentType } from '@features/enrollments/enums/enrollment.enum';
 import { SectionEntity } from '@features/sections/entities/section.entity';
 import { StudentEntity } from '@features/students/entities/student.entity';
-import { Column, Entity, ManyToOne } from 'typeorm';
+import { Column, Entity, JoinColumn, ManyToOne } from 'typeorm';
 
 @Entity({ name: 'enrollments' })
 export class EnrollmentEntity extends BaseEntity {
@@ -54,11 +54,14 @@ export class EnrollmentEntity extends BaseEntity {
   scholarshipDetails: string;
 
   @ManyToOne(() => StudentEntity)
+  @JoinColumn({ name: 'student_id' })
   student: StudentEntity;
 
   @ManyToOne(() => SectionEntity)
+  @JoinColumn({ name: 'section_id' })
   section: SectionEntity;
 
   @ManyToOne(() => AcademicYearEntity)
+  @JoinColumn({ name: 'academic_year_id' })
   academicYear: AcademicYearEntity;
 }

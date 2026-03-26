@@ -2,12 +2,14 @@ import { ErrorHandler } from '@common/exceptions';
 import { PaginatedResponse, Response } from '@common/types/global.types';
 import { hashPassword } from '@common/utils/password.util';
 import { EnrollmentEntity } from '@features/enrollments/entities/enrollment.entity';
+import { GuardianEntity } from '@features/guardians/entities/guardian.entity';
 import { InstitutionEntity } from '@features/institution/entities/institution.entity';
 import { DocumentType, Gender, MaterialStatus } from '@features/persons/enums/person.enum';
 import { PersonEntity } from '@features/persons/entities/person.entity';
 import { RoleEntity } from '@features/roles/entities/role.entity';
+import { StudentGuardianEntity } from '@features/student_guardians/entities/student_guardian.entity';
 import { UserEntity, UserStatus } from '@features/users/entities/user.entity';
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, ILike, In, Repository } from 'typeorm';
 import { CreateStudentDto } from './dto/create-student.dto';
@@ -45,6 +47,8 @@ type StudentView = {
 
 @Injectable()
 export class StudentsService {
+  private readonly logger = new Logger(StudentsService.name);
+
   constructor(
     @InjectRepository(StudentEntity)
     private readonly studentsRepository: Repository<StudentEntity>,
@@ -58,6 +62,10 @@ export class StudentsService {
     private readonly rolesRepository: Repository<RoleEntity>,
     @InjectRepository(EnrollmentEntity)
     private readonly enrollmentsRepository: Repository<EnrollmentEntity>,
+    @InjectRepository(GuardianEntity)
+    private readonly guardiansRepository: Repository<GuardianEntity>,
+    @InjectRepository(StudentGuardianEntity)
+    private readonly studentGuardiansRepository: Repository<StudentGuardianEntity>,
     private readonly dataSource: DataSource,
   ) {}
 
@@ -106,15 +114,26 @@ export class StudentsService {
     }
   }
 
-  async findAll(filter: FilterStudentDto): Promise<PaginatedResponse<StudentView>> {
+  async findAll(filter: FilterStudentDto, userId?: string): Promise<PaginatedResponse<StudentView>> {
     try {
-      const { page = 1, size = 10, search, status } = filter;
+      const { page = 1, size = 10, search, status, studentType } = filter;
+      const scopedStudentIds = await this.resolveVisibleStudentIds(userId);
+
+      if (scopedStudentIds && scopedStudentIds.length === 0) {
+        return {
+          data: [],
+          total: 0,
+          page,
+          size,
+        };
+      }
+
       const qb = this.studentsRepository
         .createQueryBuilder('student')
         .leftJoinAndSelect('student.person', 'person')
         .leftJoinAndSelect('person.user', 'user')
         .leftJoinAndSelect('student.institution', 'institution')
-        .orderBy('student.created_at', 'DESC')
+        .orderBy('student.createdAt', 'DESC')
         .skip((page - 1) * size)
         .take(size);
 
@@ -122,14 +141,22 @@ export class StudentsService {
         qb.andWhere('student.status = :status', { status });
       }
 
+      if (studentType) {
+        qb.andWhere('student.student_type = :studentType', { studentType });
+      }
+
+      if (scopedStudentIds) {
+        qb.andWhere('student.id IN (:...scopedStudentIds)', { scopedStudentIds });
+      }
+
       if (search?.trim()) {
         qb.andWhere(
           `(
-            student.studentCode ILIKE :search OR
-            person.firstName ILIKE :search OR
-            person.lastName ILIKE :search OR
+            student.student_code ILIKE :search OR
+            person.first_name ILIKE :search OR
+            person.last_name ILIKE :search OR
             person.email ILIKE :search OR
-            person.documentNumber ILIKE :search OR
+            person.document_number ILIKE :search OR
             user.username ILIKE :search
           )`,
           { search: `%${search.trim()}%` },
@@ -147,7 +174,49 @@ export class StudentsService {
       };
     } catch (error) {
       if (error instanceof ErrorHandler) throw error;
+      this.logger.error(
+        `Error finding students with filter ${JSON.stringify(filter ?? {})} and user ${userId ?? 'anonymous'}`,
+        error instanceof Error ? error.stack : `${error}`,
+      );
       throw new ErrorHandler('Ocurrió un error al obtener los estudiantes', 500);
+    }
+  }
+
+  async findAllCursor(
+    params: FilterStudentDto & {
+      limit?: number;
+      cursorDate?: string;
+      cursorId?: string;
+    },
+    userId?: string,
+  ) {
+    try {
+      const roleRow = userId
+        ? await this.usersRepository.findOne({
+            where: { id: userId },
+            relations: ['role'],
+            select: {
+              id: true,
+              role: {
+                id: true,
+                name: true,
+              },
+            },
+          })
+        : null;
+
+      const result = await this.dataSource.query(`SELECT get_students_cursor($1) as result`, [
+        JSON.stringify({
+          ...params,
+          userId,
+          roleName: roleRow?.role?.name ?? null,
+        }),
+      ]);
+
+      return result[0]?.result ?? { data: [], nextCursor: null };
+    } catch (error) {
+      if (error instanceof ErrorHandler) throw error;
+      throw new ErrorHandler('Ocurrió un error al obtener los estudiantes por cursor', 500);
     }
   }
 
@@ -303,6 +372,119 @@ export class StudentsService {
       where: { id },
       relations: ['person', 'person.user', 'institution'],
     }) as Promise<HydratedStudent | null>;
+  }
+
+  private isFullAccessRole(roleName?: string | null) {
+    const roleKey = String(roleName ?? '').toLowerCase();
+    return (
+      (roleKey.includes('super') && roleKey.includes('admin')) ||
+      roleKey.includes('admin') ||
+      roleKey.includes('director') ||
+      roleKey.includes('subdirector') ||
+      roleKey.includes('ugel')
+    );
+  }
+
+  private isTeacherRole(roleName?: string | null) {
+    const roleKey = String(roleName ?? '').toLowerCase();
+    return roleKey.includes('docente') || roleKey.includes('teacher');
+  }
+
+  private isStudentRole(roleName?: string | null) {
+    const roleKey = String(roleName ?? '').toLowerCase();
+    return roleKey.includes('alumno') || roleKey.includes('student');
+  }
+
+  private isGuardianRole(roleName?: string | null) {
+    const roleKey = String(roleName ?? '').toLowerCase();
+    return roleKey.includes('apoderado') || roleKey.includes('guardian') || roleKey.includes('tutor');
+  }
+
+  private async resolveVisibleStudentIds(userId?: string): Promise<string[] | null> {
+    if (!userId) {
+      return null;
+    }
+
+    const user = await this.usersRepository.findOne({
+      where: { id: userId },
+      relations: ['person', 'role'],
+    });
+
+    if (!user) {
+      return [];
+    }
+
+    if (this.isFullAccessRole(user.role?.name)) {
+      return null;
+    }
+
+    const personId = user.person?.id;
+    if (!personId) {
+      return [];
+    }
+
+    if (this.isStudentRole(user.role?.name)) {
+      const student = await this.studentsRepository.findOne({
+        where: { person: { id: personId } },
+        select: ['id'],
+      });
+      return student ? [student.id] : [];
+    }
+
+    if (this.isGuardianRole(user.role?.name)) {
+      const guardian = await this.guardiansRepository.findOne({
+        where: { person: { id: personId } },
+        select: ['id'],
+      });
+
+      if (!guardian) {
+        return [];
+      }
+
+      const links = await this.studentGuardiansRepository.find({
+        where: { guardian: { id: guardian.id } },
+        relations: ['student'],
+      });
+
+      return [...new Set(links.map((link) => link.student?.id).filter(Boolean) as string[])];
+    }
+
+    if (this.isTeacherRole(user.role?.name)) {
+      const teacherRows = await this.dataSource.query(
+        `
+          SELECT t.id
+          FROM teachers t
+          WHERE t.person_id = $1
+          LIMIT 1
+        `,
+        [personId],
+      );
+
+      const teacherId = teacherRows[0]?.id as string | undefined;
+      if (!teacherId) {
+        return [];
+      }
+
+      const studentRows = await this.dataSource.query(
+        `
+          SELECT DISTINCT e.student_id AS "studentId"
+          FROM enrollments e
+          INNER JOIN section_courses sc
+            ON sc."sectionId" = e.section_id
+           AND sc.academic_year_id = e.academic_year_id
+          WHERE sc."teacherId" = $1
+        `,
+        [teacherId],
+      );
+
+      const studentIds = studentRows
+        .map((row: { studentId?: string }) => row.studentId)
+        .filter((value): value is string => Boolean(value));
+
+      return Array.from(new Set<string>(studentIds));
+    }
+
+    return [];
   }
 
   private async resolveInstitutionId(institutionId?: string, fallbackId?: string): Promise<string | null> {

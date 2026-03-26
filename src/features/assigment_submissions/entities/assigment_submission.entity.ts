@@ -2,7 +2,7 @@ import { BaseEntity } from '@common/entities/base.entity';
 import { EnrollmentEntity } from '@features/enrollments/entities/enrollment.entity';
 import { AssigmentSubmissionStatus } from '@features/assigment_submissions/enums/assigment_submission.enum';
 import { AssigmentEntity } from '@features/assigments/entities/assigment.entity';
-import { Column, Entity, ManyToOne } from 'typeorm';
+import { Column, Entity, JoinColumn, ManyToOne } from 'typeorm';
 
 @Entity({ name: 'assigment_submissions' })
 export class AssigmentSubmissionEntity extends BaseEntity {
@@ -23,6 +23,9 @@ export class AssigmentSubmissionEntity extends BaseEntity {
 
   @Column({ type: 'varchar', length: 255 })
   linkUrl: string;
+
+  @Column({ type: 'jsonb', nullable: true })
+  responseData?: unknown;
 
   @Column({ type: 'int' })
   score: number;
@@ -46,8 +49,10 @@ export class AssigmentSubmissionEntity extends BaseEntity {
   status: AssigmentSubmissionStatus;
 
   @ManyToOne(() => AssigmentEntity)
+  @JoinColumn({ name: 'assigment_id' })
   assigment: AssigmentEntity;
 
   @ManyToOne(() => EnrollmentEntity, { nullable: true })
+  @JoinColumn({ name: 'enrollment_id' })
   enrollment: EnrollmentEntity | null;
 }

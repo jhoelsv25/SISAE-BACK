@@ -1,9 +1,11 @@
 import { FilterBaseDto } from '@common/dtos/filter-base.dto';
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common';
+import { JwtAuthGuard } from '@auth/guards/jwt-auth.guard';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Req, UseGuards } from '@nestjs/common';
 import { CreateVirtualClassroomDto } from './dto/create-virtual_classroom.dto';
 import { UpdateVirtualClassroomDto } from './dto/update-virtual_classroom.dto';
 import { VirtualClassroomsService } from './virtual_classrooms.service';
 
+@UseGuards(JwtAuthGuard)
 @Controller('virtual-classrooms')
 export class VirtualClassroomsController {
   constructor(private readonly virtualClassroomsService: VirtualClassroomsService) {}
@@ -14,8 +16,8 @@ export class VirtualClassroomsController {
   }
 
   @Get()
-  async findAll(@Query() filters: FilterBaseDto) {
-    return this.virtualClassroomsService.findAll(filters);
+  async findAll(@Query() filters: FilterBaseDto, @Req() req: any) {
+    return this.virtualClassroomsService.findAll(filters, req.user?.id);
   }
 
   @Get(':id')

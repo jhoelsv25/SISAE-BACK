@@ -3,9 +3,11 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ExcelModule } from '@common/excel/excel.module';
 import { EnrollmentEntity } from '@features/enrollments/entities/enrollment.entity';
+import { GuardianEntity } from '@features/guardians/entities/guardian.entity';
 import { InstitutionEntity } from '@features/institution/entities/institution.entity';
 import { PersonEntity } from '@features/persons/entities/person.entity';
 import { RoleEntity } from '@features/roles/entities/role.entity';
+import { StudentGuardianEntity } from '@features/student_guardians/entities/student_guardian.entity';
 import { UserEntity } from '@features/users/entities/user.entity';
 import { RedisModule } from '../../infrastruture/redis/redis.module';
 import { QUEUE } from '../../infrastruture/queues';
@@ -26,6 +28,8 @@ import { StudentsService } from './students.service';
       UserEntity,
       RoleEntity,
       EnrollmentEntity,
+      GuardianEntity,
+      StudentGuardianEntity,
     ]),
     BullModule.registerQueue({ name: QUEUE.STUDENTS_IMPORT }),
     RedisModule,

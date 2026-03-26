@@ -59,8 +59,17 @@ export class StudentsController {
   }
 
   @Get()
-  findAll(@Query() query: FilterStudentDto) {
-    return this.studentsService.findAll(query);
+  @UseGuards(JwtAuthGuard)
+  findAll(@Query() query: FilterStudentDto, @Req() req: Request) {
+    const userId = (req as any).user?.id ?? (req as any).user?.sub;
+    return this.studentsService.findAll(query, userId);
+  }
+
+  @Get('cursor')
+  @UseGuards(JwtAuthGuard)
+  findAllCursor(@Query() query: FilterStudentDto, @Req() req: Request) {
+    const userId = (req as any).user?.id ?? (req as any).user?.sub;
+    return this.studentsService.findAllCursor(query as any, userId);
   }
 
   @Get(':id')

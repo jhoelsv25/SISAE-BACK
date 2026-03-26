@@ -32,5 +32,6 @@ export class SectionEntity extends BaseEntity {
   grade: GradeLevelEntity;
 
   @ManyToOne(() => AcademicYearEntity)
+  @JoinColumn({ name: 'year_academic_id' })
   yearAcademic: AcademicYearEntity;
 }

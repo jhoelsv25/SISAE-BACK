@@ -2,7 +2,7 @@ import { BaseEntity } from '@common/entities/base.entity';
 import { InstitutionEntity } from '@features/institution/entities/institution.entity';
 import { PersonEntity } from '@features/persons/entities/person.entity';
 import { StudentStatus, StudentType } from '@features/students/enums/student.enum';
-import { Column, Entity, ManyToOne } from 'typeorm';
+import { Column, Entity, JoinColumn, ManyToOne } from 'typeorm';
 
 @Entity({ name: 'students' })
 export class StudentEntity extends BaseEntity {
@@ -49,8 +49,10 @@ export class StudentEntity extends BaseEntity {
   status: StudentStatus;
 
   @ManyToOne(() => InstitutionEntity)
+  @JoinColumn({ name: 'institution_id' })
   institution: InstitutionEntity;
 
   @ManyToOne(() => PersonEntity)
+  @JoinColumn({ name: 'person_id' })
   person: PersonEntity;
 }
