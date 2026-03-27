@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { FindOptionsWhere, Repository } from 'typeorm';
 import { ErrorHandler } from '../../common/exceptions';
@@ -7,16 +8,64 @@ import { PersonEntity } from '../persons/entities/person.entity';
 import { CreateTeacherDto } from './dto/create-teacher.dto';
 import { FilterTeacherDto } from './dto/filter-teacher.dto';
 import { UpdateTeacherDto } from './dto/update-teacher.dto';
+import { TeacherCredentialEntity } from './entities/teacher-credential.entity';
 import { TeacherEntity } from './entities/teacher.entity';
 
 @Injectable()
 export class TeachersService {
   constructor(
+    private readonly configService: ConfigService,
     @InjectRepository(TeacherEntity)
     private readonly teachersRepository: Repository<TeacherEntity>,
     @InjectRepository(PersonEntity)
     private readonly personsRepository: Repository<PersonEntity>,
+    @InjectRepository(TeacherCredentialEntity)
+    private readonly teacherCredentialRepository: Repository<TeacherCredentialEntity>,
   ) {}
+
+  private buildCredentialPayload(teacher: TeacherEntity) {
+    const frontendOrigin = this.configService.get<string>('CORS_ORIGIN')?.split(',')[0]?.trim() || 'http://localhost:4200';
+    const params = new URLSearchParams({
+      mode: 'teacher',
+      code: teacher.teacherCode,
+    });
+    return `${frontendOrigin}/attendance/quick-register?${params.toString()}`;
+  }
+
+  private async ensureCredential(teacher: TeacherEntity, regenerate = false) {
+    const existing = await this.teacherCredentialRepository.findOne({
+      where: { teacher: { id: teacher.id } },
+      relations: ['teacher'],
+    });
+
+    const credentialCode = `DOC-${teacher.teacherCode}`;
+    const qrValue = this.buildCredentialPayload(teacher);
+
+    if (existing && !regenerate) {
+      existing.credentialCode = credentialCode;
+      existing.qrValue = qrValue;
+      existing.active = true;
+      existing.issuedAt = existing.issuedAt ?? new Date();
+      return this.teacherCredentialRepository.save(existing);
+    }
+
+    if (existing && regenerate) {
+      existing.credentialCode = credentialCode;
+      existing.qrValue = qrValue;
+      existing.active = true;
+      existing.issuedAt = new Date();
+      return this.teacherCredentialRepository.save(existing);
+    }
+
+    const created = this.teacherCredentialRepository.create({
+      credentialCode,
+      qrValue,
+      active: true,
+      issuedAt: new Date(),
+      teacher: { id: teacher.id } as TeacherEntity,
+    });
+    return this.teacherCredentialRepository.save(created);
+  }
 
   async create(dto: CreateTeacherDto): Promise<Response<TeacherEntity>> {
     try {
@@ -34,6 +83,9 @@ export class TeachersService {
         where: { id: saved.id },
         relations: ['person', 'institution'],
       });
+      if (hydrated) {
+        await this.ensureCredential(hydrated);
+      }
       return { message: 'Docente creado correctamente', data: hydrated ?? saved };
     } catch (error) {
       throw new ErrorHandler('Ocurrio un error al crear el docente', 500);
@@ -95,6 +147,7 @@ export class TeachersService {
       if (!teacher) {
         throw new ErrorHandler('Docente no encontrado', 404);
       }
+      await this.ensureCredential(teacher);
       return { message: 'Docente encontrado', data: teacher };
     } catch (error) {
       throw new ErrorHandler('Ocurrio un error al obtener el docente', 500);
@@ -122,6 +175,9 @@ export class TeachersService {
         where: { id },
         relations: ['person', 'institution'],
       });
+      if (hydrated) {
+        await this.ensureCredential(hydrated);
+      }
       return { message: 'Docente actualizado correctamente', data: hydrated ?? teacher };
     } catch (error) {
       throw new ErrorHandler('Ocurrio un error al actualizar el docente', 500);
@@ -137,6 +193,42 @@ export class TeachersService {
       return { message: 'Docente eliminado correctamente', data: null };
     } catch (error) {
       throw new ErrorHandler('Ocurrio un error al eliminar el docente', 500);
+    }
+  }
+
+  async getCredential(id: string): Promise<Response<TeacherCredentialEntity>> {
+    try {
+      const teacher = await this.teachersRepository.findOne({
+        where: { id },
+        relations: ['person', 'institution'],
+      });
+      if (!teacher) {
+        throw new ErrorHandler('Docente no encontrado', 404);
+      }
+
+      const credential = await this.ensureCredential(teacher);
+      return { message: 'Carnet docente generado correctamente', data: credential };
+    } catch (error) {
+      if (error instanceof ErrorHandler) throw error;
+      throw new ErrorHandler('Ocurrio un error al obtener el carnet docente', 500);
+    }
+  }
+
+  async regenerateCredential(id: string): Promise<Response<TeacherCredentialEntity>> {
+    try {
+      const teacher = await this.teachersRepository.findOne({
+        where: { id },
+        relations: ['person', 'institution'],
+      });
+      if (!teacher) {
+        throw new ErrorHandler('Docente no encontrado', 404);
+      }
+
+      const credential = await this.ensureCredential(teacher, true);
+      return { message: 'Carnet docente regenerado correctamente', data: credential };
+    } catch (error) {
+      if (error instanceof ErrorHandler) throw error;
+      throw new ErrorHandler('Ocurrio un error al regenerar el carnet docente', 500);
     }
   }
 }

@@ -2,6 +2,7 @@ import { ErrorHandler } from '@common/exceptions';
 import { PaginatedResponse, Response } from '@common/types/global.types';
 import { hashPassword } from '@common/utils/password.util';
 import { EnrollmentEntity } from '@features/enrollments/entities/enrollment.entity';
+import { SectionCourseEntity } from '@features/section-course/entities/section-course.entity';
 import { GuardianEntity } from '@features/guardians/entities/guardian.entity';
 import { InstitutionEntity } from '@features/institution/entities/institution.entity';
 import { DocumentType, Gender, MaterialStatus } from '@features/persons/enums/person.enum';
@@ -9,6 +10,7 @@ import { PersonEntity } from '@features/persons/entities/person.entity';
 import { RoleEntity } from '@features/roles/entities/role.entity';
 import { StudentGuardianEntity } from '@features/student_guardians/entities/student_guardian.entity';
 import { UserEntity, UserStatus } from '@features/users/entities/user.entity';
+import { ConfigService } from '@nestjs/config';
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, ILike, In, Repository } from 'typeorm';
@@ -17,6 +19,7 @@ import { FilterStudentDto } from './dto/filter-student.dto';
 import { ImportStudentsDto } from './dto/import-students.dto';
 import { UpdateStudentDto } from './dto/update-student.dto';
 import { StudentStatus, StudentType } from './enums/student.enum';
+import { StudentCredentialEntity } from './entities/student-credential.entity';
 import { StudentEntity } from './entities/student.entity';
 
 type HydratedStudent = StudentEntity & {
@@ -50,6 +53,7 @@ export class StudentsService {
   private readonly logger = new Logger(StudentsService.name);
 
   constructor(
+    private readonly configService: ConfigService,
     @InjectRepository(StudentEntity)
     private readonly studentsRepository: Repository<StudentEntity>,
     @InjectRepository(PersonEntity)
@@ -66,8 +70,54 @@ export class StudentsService {
     private readonly guardiansRepository: Repository<GuardianEntity>,
     @InjectRepository(StudentGuardianEntity)
     private readonly studentGuardiansRepository: Repository<StudentGuardianEntity>,
+    @InjectRepository(StudentCredentialEntity)
+    private readonly studentCredentialRepository: Repository<StudentCredentialEntity>,
     private readonly dataSource: DataSource,
   ) {}
+
+  private buildCredentialPayload(student: StudentEntity) {
+    const frontendOrigin = this.configService.get<string>('CORS_ORIGIN')?.split(',')[0]?.trim() || 'http://localhost:4200';
+    const params = new URLSearchParams({
+      mode: 'student',
+      code: student.studentCode,
+    });
+    return `${frontendOrigin}/attendance/quick-register?${params.toString()}`;
+  }
+
+  private async ensureCredential(student: StudentEntity, regenerate = false) {
+    const existing = await this.studentCredentialRepository.findOne({
+      where: { student: { id: student.id } },
+      relations: ['student'],
+    });
+
+    const credentialCode = `ALU-${student.studentCode}`;
+    const qrValue = this.buildCredentialPayload(student);
+
+    if (existing && !regenerate) {
+      existing.credentialCode = credentialCode;
+      existing.qrValue = qrValue;
+      existing.active = true;
+      existing.issuedAt = existing.issuedAt ?? new Date();
+      return this.studentCredentialRepository.save(existing);
+    }
+
+    if (existing && regenerate) {
+      existing.credentialCode = credentialCode;
+      existing.qrValue = qrValue;
+      existing.active = true;
+      existing.issuedAt = new Date();
+      return this.studentCredentialRepository.save(existing);
+    }
+
+    const created = this.studentCredentialRepository.create({
+      credentialCode,
+      qrValue,
+      active: true,
+      issuedAt: new Date(),
+      student: { id: student.id } as StudentEntity,
+    });
+    return this.studentCredentialRepository.save(created);
+  }
 
   async create(dto: CreateStudentDto): Promise<Response<StudentView>> {
     try {
@@ -103,6 +153,7 @@ export class StudentsService {
       if (!hydrated) {
         throw new ErrorHandler('No se pudo hidratar el estudiante creado', 500);
       }
+      await this.ensureCredential(hydrated);
 
       return {
         message: 'Estudiante creado correctamente',
@@ -116,7 +167,7 @@ export class StudentsService {
 
   async findAll(filter: FilterStudentDto, userId?: string): Promise<PaginatedResponse<StudentView>> {
     try {
-      const { page = 1, size = 10, search, status, studentType } = filter;
+      const { page = 1, size = 10, search, status, studentType, sectionId, academicYearId, sectionCourseId } = filter;
       const scopedStudentIds = await this.resolveVisibleStudentIds(userId);
 
       if (scopedStudentIds && scopedStudentIds.length === 0) {
@@ -133,9 +184,34 @@ export class StudentsService {
         .leftJoinAndSelect('student.person', 'person')
         .leftJoinAndSelect('person.user', 'user')
         .leftJoinAndSelect('student.institution', 'institution')
+        .distinct(true)
         .orderBy('student.createdAt', 'DESC')
         .skip((page - 1) * size)
         .take(size);
+
+      if (sectionId || academicYearId || sectionCourseId) {
+        qb.innerJoin(EnrollmentEntity, 'enrollment', 'enrollment.student_id = student.id');
+        qb.andWhere('enrollment.status = :enrollmentStatus', {
+          enrollmentStatus: 'enrolled',
+        });
+
+        if (sectionId) {
+          qb.andWhere('enrollment.section_id = :sectionId', { sectionId });
+        }
+
+        if (academicYearId) {
+          qb.andWhere('enrollment.academic_year_id = :academicYearId', { academicYearId });
+        }
+
+        if (sectionCourseId) {
+          qb.innerJoin(
+            SectionCourseEntity,
+            'filterSectionCourse',
+            'filterSectionCourse."sectionId" = enrollment.section_id AND filterSectionCourse.academic_year_id = enrollment.academic_year_id',
+          );
+          qb.andWhere('filterSectionCourse.id = :sectionCourseId', { sectionCourseId });
+        }
+      }
 
       if (status) {
         qb.andWhere('student.status = :status', { status });
@@ -226,6 +302,7 @@ export class StudentsService {
       if (!student) {
         throw new ErrorHandler('Estudiante no encontrado', 404);
       }
+      await this.ensureCredential(student);
 
       const gradeMap = await this.getLatestGradeMap([student.id]);
       return { message: 'Estudiante encontrado', data: this.mapStudent(student, gradeMap) };
@@ -264,6 +341,7 @@ export class StudentsService {
       if (!hydrated) {
         throw new ErrorHandler('No se pudo hidratar el estudiante actualizado', 500);
       }
+      await this.ensureCredential(hydrated);
 
       const gradeMap = await this.getLatestGradeMap([hydrated.id]);
       return {
@@ -286,6 +364,36 @@ export class StudentsService {
     } catch (error) {
       if (error instanceof ErrorHandler) throw error;
       throw new ErrorHandler('Ocurrió un error al eliminar el estudiante', 500);
+    }
+  }
+
+  async getCredential(id: string): Promise<Response<StudentCredentialEntity>> {
+    try {
+      const student = await this.findStudentEntity(id);
+      if (!student) {
+        throw new ErrorHandler('Estudiante no encontrado', 404);
+      }
+
+      const credential = await this.ensureCredential(student);
+      return { message: 'Carnet estudiantil generado correctamente', data: credential };
+    } catch (error) {
+      if (error instanceof ErrorHandler) throw error;
+      throw new ErrorHandler('Ocurrió un error al obtener el carnet estudiantil', 500);
+    }
+  }
+
+  async regenerateCredential(id: string): Promise<Response<StudentCredentialEntity>> {
+    try {
+      const student = await this.findStudentEntity(id);
+      if (!student) {
+        throw new ErrorHandler('Estudiante no encontrado', 404);
+      }
+
+      const credential = await this.ensureCredential(student, true);
+      return { message: 'Carnet estudiantil regenerado correctamente', data: credential };
+    } catch (error) {
+      if (error instanceof ErrorHandler) throw error;
+      throw new ErrorHandler('Ocurrió un error al regenerar el carnet estudiantil', 500);
     }
   }
 

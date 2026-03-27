@@ -30,10 +30,43 @@ export class AttendancesService {
 
   async findAll(filter: any) {
     try {
-      const attendances = await this.repo.find({ where: filter });
-      return { message: 'Asistencias obtenidas correctamente', data: attendances };
+      const { sectionCourse, enrollment, date, status, sessionType } = filter ?? {};
+      const where: Record<string, any> = {};
+
+      if (sectionCourse) {
+        where.sectionCourse = { id: sectionCourse };
+      }
+      if (enrollment) {
+        where.enrollment = { id: enrollment };
+      }
+      if (date) {
+        where.date = date;
+      }
+      if (status) {
+        where.status = status;
+      }
+      if (sessionType) {
+        where.sessionType = sessionType;
+      }
+
+      const attendances = await this.repo.find({
+        where,
+        relations: [
+          'enrollment',
+          'enrollment.student',
+          'enrollment.student.person',
+          'sectionCourse',
+          'sectionCourse.course',
+          'sectionCourse.section',
+        ],
+        order: {
+          date: 'DESC',
+          createdAt: 'DESC',
+        },
+      });
+      return { message: 'Asistencias obtenidas correctamente', data: attendances, total: attendances.length };
     } catch (error) {
-      throw new ErrorHandler('Ocurrió un error al obtener las asistencias', 500);
+      ErrorHandler.handleUnknownError(error, 'Ocurrió un error al obtener las asistencias');
     }
   }
 

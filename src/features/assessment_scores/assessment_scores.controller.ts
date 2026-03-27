@@ -17,6 +17,11 @@ export class AssessmentScoresController {
     return this.assessmentScoresService.findAll(query);
   }
 
+  @Get('consolidated')
+  findConsolidated(@Query() query: any) {
+    return this.assessmentScoresService.findConsolidated(query);
+  }
+
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.assessmentScoresService.findOne(id);

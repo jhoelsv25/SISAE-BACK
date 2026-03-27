@@ -317,6 +317,7 @@ export class AuthService {
           institutionId: teacher.institution?.id ?? null,
           institutionName: teacher.institution?.name ?? null,
           details: {
+            teacherId: teacher.id,
             specialization: teacher.specialization,
             professionalTitle: teacher.professionalTitle,
             teachingLevel: teacher.teachingLevel,

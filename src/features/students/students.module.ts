@@ -11,6 +11,7 @@ import { StudentGuardianEntity } from '@features/student_guardians/entities/stud
 import { UserEntity } from '@features/users/entities/user.entity';
 import { RedisModule } from '../../infrastruture/redis/redis.module';
 import { QUEUE } from '../../infrastruture/queues';
+import { StudentCredentialEntity } from './entities/student-credential.entity';
 import { StudentEntity } from './entities/student.entity';
 import { StudentsController } from './students.controller';
 import { StudentsImportProcessor } from './students-import.processor';
@@ -30,6 +31,7 @@ import { StudentsService } from './students.service';
       EnrollmentEntity,
       GuardianEntity,
       StudentGuardianEntity,
+      StudentCredentialEntity,
     ]),
     BullModule.registerQueue({ name: QUEUE.STUDENTS_IMPORT }),
     RedisModule,

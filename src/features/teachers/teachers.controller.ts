@@ -23,9 +23,19 @@ export class TeachersController {
     return this.teachersService.findOne(id);
   }
 
+  @Get(':id/credential')
+  getCredential(@Param('id') id: string) {
+    return this.teachersService.getCredential(id);
+  }
+
   @Patch(':id')
   update(@Param('id') id: string, @Body() dto: UpdateTeacherDto) {
     return this.teachersService.update(id, dto);
+  }
+
+  @Post(':id/credential/regenerate')
+  regenerateCredential(@Param('id') id: string) {
+    return this.teachersService.regenerateCredential(id);
   }
 
   @Delete(':id')

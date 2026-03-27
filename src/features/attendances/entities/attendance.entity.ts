@@ -3,7 +3,7 @@ import { AttendanceStatus } from '@common/enums/global.enum';
 import { SessionType } from '@features/attendances/enums/attendance.enum';
 import { EnrollmentEntity } from '@features/enrollments/entities/enrollment.entity';
 import { SectionCourseEntity } from '@features/section-course/entities/section-course.entity';
-import { Column, Entity, ManyToOne } from 'typeorm';
+import { Column, Entity, JoinColumn, ManyToOne } from 'typeorm';
 
 @Entity({ name: 'attendances' })
 export class AttendanceEntity extends BaseEntity {
@@ -31,8 +31,10 @@ export class AttendanceEntity extends BaseEntity {
   justification: string;
 
   @ManyToOne(() => EnrollmentEntity)
+  @JoinColumn({ name: 'enrollment_id' })
   enrollment: EnrollmentEntity;
 
   @ManyToOne(() => SectionCourseEntity)
+  @JoinColumn({ name: 'section_course_id' })
   sectionCourse: SectionCourseEntity;
 }

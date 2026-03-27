@@ -10,6 +10,7 @@ import { AssigmentStatus, AssigmentType } from '../assigments/enums/assigment.en
 import { AssigmentQuestionType } from '../assigments/enums/assigment-question.enum';
 import { AssigmentSubmissionEntity } from '../assigment_submissions/entities/assigment_submission.entity';
 import { AssigmentSubmissionStatus } from '../assigment_submissions/enums/assigment_submission.enum';
+import { AssessmentConsolidationService } from '../assessment_scores/assessment-consolidation.service';
 import { AssessmentScoreEntity } from '../assessment_scores/entities/assessment_score.entity';
 import { AssessmentEntity } from '../assessments/entities/assessment.entity';
 import { AssessmentStatus, AssessmentType } from '../assessments/enums/assessment.enum';
@@ -78,6 +79,7 @@ export class ClassroomService {
     private readonly sectionCourseRepo: Repository<SectionCourseEntity>,
     @InjectRepository(VirtualClassroomEntity)
     private readonly virtualClassroomRepo: Repository<VirtualClassroomEntity>,
+    private readonly assessmentConsolidationService: AssessmentConsolidationService,
     private readonly eventEmitter: EventEmitter2,
   ) {}
 
@@ -1467,6 +1469,7 @@ export class ClassroomService {
     }));
     const assessments = await this.assessmentRepo.find({
       where: { sectionCourse: { id: resolvedSectionCourseId } },
+      relations: ['period', 'competency'],
       order: { assessmentDate: 'ASC' },
     });
 
@@ -1496,6 +1499,20 @@ export class ClassroomService {
         type: assessment.type,
         status: assessment.status,
         weightPercentage: assessment.weightPercentage,
+        period: assessment.period
+          ? {
+              id: assessment.period.id,
+              name: assessment.period.name,
+              periodNumber: assessment.period.periodNumber,
+            }
+          : undefined,
+        competency: assessment.competency
+          ? {
+              id: assessment.competency.id,
+              code: assessment.competency.code,
+              name: assessment.competency.name,
+            }
+          : undefined,
         average: Number(average.toFixed(2)),
         averageLabel: this.gradeScaleLabel(Number(average.toFixed(2)), gradeScales),
         studentsCount: relatedScores.length,
@@ -1514,9 +1531,12 @@ export class ClassroomService {
       };
     });
 
-    const overallAverage = rows.length
-      ? rows.reduce((acc, row) => acc + row.average, 0) / rows.length
-      : 0;
+    const overallAverage = this.weightedAverage(
+      rows.map((row) => ({
+        value: row.average,
+        weight: Number(row.weightPercentage || 0),
+      })),
+    );
 
     return {
       data: rows,
@@ -1527,6 +1547,15 @@ export class ClassroomService {
         averageLabel: this.gradeScaleLabel(Number(overallAverage.toFixed(2)), gradeScales),
       },
     };
+  }
+
+  private weightedAverage(items: Array<{ value: number; weight: number }>) {
+    if (!items.length) return 0;
+    const totalWeight = items.reduce((acc, item) => acc + Math.max(Number(item.weight || 0), 0), 0);
+    if (totalWeight <= 0) {
+      return items.reduce((acc, item) => acc + Number(item.value || 0), 0) / items.length;
+    }
+    return items.reduce((acc, item) => acc + Number(item.value || 0) * Math.max(Number(item.weight || 0), 0), 0) / totalWeight;
   }
 
   private async getAllowedStudentIds(userId?: string): Promise<string[] | null> {
@@ -1686,6 +1715,7 @@ export class ClassroomService {
       existing.observation = observation ?? '';
       existing.registerAt = new Date() as any;
       await this.assessmentScoreRepo.save(existing);
+      await this.assessmentConsolidationService.syncForAssessment(assessmentId);
       return existing;
     }
 
@@ -1697,7 +1727,9 @@ export class ClassroomService {
       assessment: { id: assessmentId },
     });
 
-    return this.assessmentScoreRepo.save(created);
+    const saved = await this.assessmentScoreRepo.save(created);
+    await this.assessmentConsolidationService.syncForAssessment(assessmentId);
+    return saved;
   }
 
   private async ensureChatRoom(sectionCourseId: string) {

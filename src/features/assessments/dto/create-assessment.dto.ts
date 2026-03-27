@@ -68,4 +68,13 @@ export class CreateAssessmentDto {
   })
   @IsUUID('4', { message: 'La sección-curso debe ser un UUID válido.' })
   sectionCourse: string;
+
+  @ApiProperty({
+    example: '91d88372-71c0-4e8d-9214-6f0d6c5f2a11',
+    description: 'ID de la competencia asociada a la evaluación (UUID)',
+    required: false,
+  })
+  @IsOptional()
+  @IsUUID('4', { message: 'La competencia debe ser un UUID válido.' })
+  competency?: string;
 }

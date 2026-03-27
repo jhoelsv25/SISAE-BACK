@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ErrorHandler } from '../../common/exceptions';
+import { AssessmentConsolidationService } from './assessment-consolidation.service';
 import { CreateAssessmentScoreDto } from './dto/create-assessment_score.dto';
 import { UpdateAssessmentScoreDto } from './dto/update-assessment_score.dto';
 import { AssessmentScoreEntity } from './entities/assessment_score.entity';
@@ -11,6 +12,7 @@ export class AssessmentScoresService {
   constructor(
     @InjectRepository(AssessmentScoreEntity)
     private readonly repo: Repository<AssessmentScoreEntity>,
+    private readonly consolidationService: AssessmentConsolidationService,
   ) {}
   async create(dto: CreateAssessmentScoreDto) {
     try {
@@ -20,6 +22,7 @@ export class AssessmentScoresService {
         assessment: dto.assessment ? { id: dto.assessment } : undefined,
       });
       await this.repo.save(assessmentScore);
+      await this.consolidationService.syncForAssessment(dto.assessment);
       return { message: 'Assessment score creado correctamente', data: assessmentScore };
     } catch (error) {
       throw new ErrorHandler('Ocurrió un error al crear el assessment score', 500);
@@ -32,6 +35,14 @@ export class AssessmentScoresService {
       return { message: 'Lista de assessment scores', data: assessmentScores };
     } catch (error) {
       throw new ErrorHandler('Ocurrió un error al obtener la lista de assessment scores', 500);
+    }
+  }
+
+  async findConsolidated(filter: any) {
+    try {
+      return await this.consolidationService.findConsolidated(filter ?? {});
+    } catch (error) {
+      throw new ErrorHandler('Ocurrió un error al obtener el consolidado académico', 500);
     }
   }
 
@@ -59,6 +70,9 @@ export class AssessmentScoresService {
         assessment: dto.assessment ? { id: dto.assessment } : undefined,
       });
       await this.repo.save(assessmentScore);
+      await this.consolidationService.syncForAssessment(
+        dto.assessment ?? ((assessmentScore.assessment as any)?.id ?? undefined),
+      );
       return { message: 'Assessment score actualizado correctamente', data: assessmentScore };
     } catch (error) {
       throw new ErrorHandler('Ocurrió un error al actualizar el assessment score', 500);
@@ -67,11 +81,13 @@ export class AssessmentScoresService {
 
   async remove(id: string) {
     try {
-      const assessmentScore = await this.repo.findOne({ where: { id } });
+      const assessmentScore = await this.repo.findOne({ where: { id }, relations: ['assessment'] });
       if (!assessmentScore) {
         throw new ErrorHandler('Assessment score no encontrado', 404);
       }
+      const assessmentId = (assessmentScore.assessment as any)?.id;
       await this.repo.remove(assessmentScore);
+      await this.consolidationService.syncForAssessment(assessmentId);
       return { message: 'Assessment score eliminado correctamente', data: assessmentScore };
     } catch (error) {
       throw new ErrorHandler('Ocurrió un error al eliminar el assessment score', 500);
@@ -81,6 +97,7 @@ export class AssessmentScoresService {
   async registerBulk(data: any) {
     try {
       const result = await this.repo.query('SELECT register_bulk_assessment_scores($1) as result', [JSON.stringify(data)]);
+      await this.consolidationService.syncForAssessment(data?.assessmentId);
       return result[0].result;
     } catch (error) {
       throw new ErrorHandler('Error al registrar notas masivas: ' + error.message, 500);

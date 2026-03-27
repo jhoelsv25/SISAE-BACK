@@ -77,6 +77,16 @@ export class StudentsController {
     return this.studentsService.findOne(id);
   }
 
+  @Get(':id/credential')
+  getCredential(@Param('id') id: string) {
+    return this.studentsService.getCredential(id);
+  }
+
+  @Post(':id/credential/regenerate')
+  regenerateCredential(@Param('id') id: string) {
+    return this.studentsService.regenerateCredential(id);
+  }
+
   @Patch(':id')
   update(@Param('id') id: string, @Body() updateStudentDto: UpdateStudentDto) {
     return this.studentsService.update(id, updateStudentDto);

@@ -1,8 +1,9 @@
 import { BaseEntity } from '@common/entities/base.entity';
 import { AssessmentStatus, AssessmentType } from '@features/assessments/enums/assessment.enum';
+import { CompetencyEntity } from '@features/competencies/entities/competency.entity';
 import { PeriodEntity } from '@features/periods/entities/period.entity';
 import { SectionCourseEntity } from '@features/section-course/entities/section-course.entity';
-import { Column, Entity, ManyToOne } from 'typeorm';
+import { Column, Entity, JoinColumn, ManyToOne } from 'typeorm';
 
 @Entity({ name: 'assessments' })
 export class AssessmentEntity extends BaseEntity {
@@ -32,8 +33,14 @@ export class AssessmentEntity extends BaseEntity {
   }
 
   @ManyToOne(() => PeriodEntity)
+  @JoinColumn({ name: 'period_id' })
   period: PeriodEntity;
 
   @ManyToOne(() => SectionCourseEntity)
+  @JoinColumn({ name: 'section_course_id' })
   sectionCourse: SectionCourseEntity;
+
+  @ManyToOne(() => CompetencyEntity, { nullable: true })
+  @JoinColumn({ name: 'competency_id' })
+  competency?: CompetencyEntity | null;
 }

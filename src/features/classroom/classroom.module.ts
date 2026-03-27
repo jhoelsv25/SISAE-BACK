@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { AssessmentScoresModule } from '../assessment_scores/assessment_scores.module';
 import { AssigmentEntity } from '../assigments/entities/assigment.entity';
 import { AssigmentQuestionEntity } from '../assigments/entities/assigment_question.entity';
 import { AssigmentQuestionOptionEntity } from '../assigments/entities/assigment_question_option.entity';
@@ -27,6 +28,7 @@ import { TaskCommentEntity } from './entities/task-comment.entity';
 
 @Module({
   imports: [
+    AssessmentScoresModule,
     TypeOrmModule.forFeature([
       ClassroomPostEntity,
       ClassroomCommentEntity,
