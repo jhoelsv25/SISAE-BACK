@@ -22,6 +22,12 @@ export class AssigmentEntity extends BaseEntity {
   @Column({ type: 'timestamptz' })
   dueDate: Date;
 
+  @Column({ name: 'publish_at', type: 'timestamptz', nullable: true })
+  publishAt?: Date | null;
+
+  @Column({ name: 'published_at', type: 'timestamptz', nullable: true })
+  publishedAt?: Date | null;
+
   @Column({ type: 'boolean' })
   lateSubmissionAllowed: boolean;
 

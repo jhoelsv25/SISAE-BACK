@@ -1,8 +1,11 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common';
+import { JwtAuthGuard } from '@auth/guards/jwt-auth.guard';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Req, UseGuards } from '@nestjs/common';
+import { Request } from 'express';
 import { CreateScheduleDto } from './dto/create-schedule.dto';
 import { UpdateScheduleDto } from './dto/update-schedule.dto';
 import { SchedulesService } from './schedules.service';
 
+@UseGuards(JwtAuthGuard)
 @Controller('schedules')
 export class SchedulesController {
   constructor(private readonly schedulesService: SchedulesService) {}
@@ -13,8 +16,8 @@ export class SchedulesController {
   }
 
   @Get()
-  findAll(@Query() filter: any) {
-    return this.schedulesService.findAll(filter);
+  findAll(@Query() filter: any, @Req() req: Request) {
+    return this.schedulesService.findAll(filter, req.user as { id?: string } | undefined);
   }
 
   @Get(':id')

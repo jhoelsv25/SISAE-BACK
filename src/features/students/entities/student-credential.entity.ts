@@ -4,19 +4,19 @@ import { StudentEntity } from './student.entity';
 
 @Entity({ name: 'student_credentials' })
 export class StudentCredentialEntity extends BaseEntity {
-  @Column({ type: 'varchar', length: 100, unique: true })
+  @Column({ name: 'credential_code', type: 'varchar', length: 100, unique: true })
   credentialCode: string;
 
-  @Column({ type: 'text' })
+  @Column({ name: 'qr_value', type: 'text' })
   qrValue: string;
 
   @Column({ type: 'boolean', default: true })
   active: boolean;
 
-  @Column({ type: 'timestamp with time zone', nullable: true })
+  @Column({ name: 'issued_at', type: 'timestamp with time zone', nullable: true })
   issuedAt: Date | null;
 
-  @Column({ type: 'timestamp with time zone', nullable: true })
+  @Column({ name: 'expires_at', type: 'timestamp with time zone', nullable: true })
   expiresAt: Date | null;
 
   @OneToOne(() => StudentEntity)

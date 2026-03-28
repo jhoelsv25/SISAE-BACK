@@ -3,6 +3,45 @@ import { MENU_MODULES_MOCK, MenuItem } from '../../common/constants/system-modul
 import { PermissionEntity } from '../../features/permissions/entities/permission.entity';
 import { RoleEntity } from '../../features/roles/entities/role.entity';
 
+function expandCanonicalSeedAliases(slug: string): string[] {
+  const aliases = [slug];
+
+  const colonMatch = /^([^:]+):(.+)$/.exec(slug);
+  if (colonMatch) {
+    const [, resource, action] = colonMatch;
+    const resourceVariants = new Set<string>([
+      resource,
+      resource.replace(/-/g, '_'),
+      resource.replace(/_/g, '-'),
+    ]);
+
+    if (resource.endsWith('s')) {
+      resourceVariants.add(resource.slice(0, -1));
+    } else {
+      resourceVariants.add(`${resource}s`);
+    }
+
+    for (const variant of resourceVariants) {
+      aliases.push(`${variant}:${action}`);
+    }
+  }
+
+  const legacyMatch = /^(view|read|create|update|delete|manage)_(.+)$/.exec(slug);
+  if (!legacyMatch) return aliases;
+
+  const [, action, resource] = legacyMatch;
+
+  if (action === 'view' || action === 'read') {
+    aliases.push(`${resource}:view`);
+  } else if (action === 'manage') {
+    aliases.push(`${resource}:manage`);
+  } else {
+    aliases.push(`${resource}:${action}`);
+  }
+
+  return Array.from(new Set(aliases));
+}
+
 export async function seedMenuModules(dataSource: DataSource) {
   const permissionRepository = dataSource.getRepository(PermissionEntity);
   const roleRepository = dataSource.getRepository(RoleEntity);
@@ -10,8 +49,8 @@ export async function seedMenuModules(dataSource: DataSource) {
   const menuItems: MenuItem[] = [...MENU_MODULES_MOCK];
 
   const standardActions = [
+    { slugSufix: 'view', nameSufix: 'Ver' },
     { slugSufix: 'create', nameSufix: 'Crear' },
-    { slugSufix: 'read', nameSufix: 'Leer' },
     { slugSufix: 'update', nameSufix: 'Actualizar' },
     { slugSufix: 'delete', nameSufix: 'Eliminar' },
   ];
@@ -20,8 +59,7 @@ export async function seedMenuModules(dataSource: DataSource) {
     menuItem: MenuItem,
     parentPath: string | null = null,
   ): Promise<void> {
-    const routeParts = menuItem.route?.split('/').filter(part => part.length > 0) || [];
-    const moduleName = routeParts.length > 0 ? routeParts[routeParts.length - 1] : menuItem.id;
+    const moduleName = menuItem.id;
 
     let path = moduleName;
     if (parentPath) {
@@ -46,15 +84,17 @@ export async function seedMenuModules(dataSource: DataSource) {
     // Crear permisos personalizados definidos en el mock si existen
     if (menuItem.permissions && menuItem.permissions.length > 0) {
       for (const customSlug of menuItem.permissions) {
-        const exists = await permissionRepository.findOne({ where: { slug: customSlug } });
-        if (!exists) {
-          const permission = permissionRepository.create({
-            slug: customSlug,
-            name: `${menuItem.label} - ${customSlug.split(':').pop() || 'Access'}`,
-            module: moduleName,
-            scope: 'system',
-          });
-          await permissionRepository.save(permission);
+        for (const slug of expandCanonicalSeedAliases(customSlug)) {
+          const exists = await permissionRepository.findOne({ where: { slug } });
+          if (!exists) {
+            const permission = permissionRepository.create({
+              slug,
+              name: `${menuItem.label} - ${slug.split(':').pop() || slug.split('_')[0] || 'Access'}`,
+              module: moduleName,
+              scope: 'system',
+            });
+            await permissionRepository.save(permission);
+          }
         }
       }
     }

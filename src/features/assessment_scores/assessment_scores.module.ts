@@ -12,6 +12,6 @@ import { PeriodCompetencyGradeEntity } from './entities/period-competency-grade.
   controllers: [AssessmentScoresController],
   providers: [AssessmentScoresService, AssessmentConsolidationService],
   imports: [TypeOrmModule.forFeature([AssessmentScoreEntity, AssessmentEntity, AcademicYearGradeScaleEntity, PeriodCompetencyGradeEntity])],
-  exports: [AssessmentConsolidationService],
+  exports: [AssessmentScoresService, AssessmentConsolidationService],
 })
 export class AssessmentScoresModule {}

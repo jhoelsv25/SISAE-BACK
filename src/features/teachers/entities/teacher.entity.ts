@@ -7,7 +7,7 @@ import {
   LaborRegime,
   WorkloadType,
 } from '@features/teachers/enums/teacher.enum';
-import { Column, Entity, ManyToOne } from 'typeorm';
+import { Column, Entity, JoinColumn, ManyToOne } from 'typeorm';
 
 @Entity({ name: 'teachers' })
 export class TeacherEntity extends BaseEntity {
@@ -54,8 +54,10 @@ export class TeacherEntity extends BaseEntity {
   employmentStatus: EmployementStatus;
 
   @ManyToOne(() => InstitutionEntity)
+  @JoinColumn({ name: 'institution_id' })
   institution: InstitutionEntity;
 
   @ManyToOne(() => PersonEntity)
+  @JoinColumn({ name: 'person_id' })
   person: PersonEntity;
 }

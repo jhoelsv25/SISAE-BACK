@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { FindOptionsWhere, Repository } from 'typeorm';
@@ -13,6 +13,8 @@ import { TeacherEntity } from './entities/teacher.entity';
 
 @Injectable()
 export class TeachersService {
+  private readonly logger = new Logger(TeachersService.name);
+
   constructor(
     private readonly configService: ConfigService,
     @InjectRepository(TeacherEntity)
@@ -33,10 +35,11 @@ export class TeachersService {
   }
 
   private async ensureCredential(teacher: TeacherEntity, regenerate = false) {
-    const existing = await this.teacherCredentialRepository.findOne({
-      where: { teacher: { id: teacher.id } },
-      relations: ['teacher'],
-    });
+    const existing = await this.teacherCredentialRepository
+      .createQueryBuilder('credential')
+      .leftJoinAndSelect('credential.teacher', 'teacher')
+      .where('teacher.id = :teacherId', { teacherId: teacher.id })
+      .getOne();
 
     const credentialCode = `DOC-${teacher.teacherCode}`;
     const qrValue = this.buildCredentialPayload(teacher);
@@ -147,9 +150,9 @@ export class TeachersService {
       if (!teacher) {
         throw new ErrorHandler('Docente no encontrado', 404);
       }
-      await this.ensureCredential(teacher);
       return { message: 'Docente encontrado', data: teacher };
     } catch (error) {
+      if (error instanceof ErrorHandler) throw error;
       throw new ErrorHandler('Ocurrio un error al obtener el docente', 500);
     }
   }
@@ -209,6 +212,7 @@ export class TeachersService {
       const credential = await this.ensureCredential(teacher);
       return { message: 'Carnet docente generado correctamente', data: credential };
     } catch (error) {
+      this.logger.error(`Error getting teacher credential for ${id}`, error instanceof Error ? error.stack : String(error));
       if (error instanceof ErrorHandler) throw error;
       throw new ErrorHandler('Ocurrio un error al obtener el carnet docente', 500);
     }
@@ -227,6 +231,10 @@ export class TeachersService {
       const credential = await this.ensureCredential(teacher, true);
       return { message: 'Carnet docente regenerado correctamente', data: credential };
     } catch (error) {
+      this.logger.error(
+        `Error regenerating teacher credential for ${id}`,
+        error instanceof Error ? error.stack : String(error),
+      );
       if (error instanceof ErrorHandler) throw error;
       throw new ErrorHandler('Ocurrio un error al regenerar el carnet docente', 500);
     }

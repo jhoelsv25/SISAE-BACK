@@ -77,8 +77,7 @@ export class RoleReadRepository {
 
     // Función recursiva para mapear Mock -> ModuleMap
     const mapModule = (item: MenuItem): ModuleMap | null => {
-      const routeParts = item.route?.split('/').filter(part => part.length > 0) || [];
-      const moduleName = routeParts.length > 0 ? routeParts[routeParts.length - 1] : item.id;
+      const moduleName = item.id;
 
       const directPermissions = permissionsByModule[moduleName] || [];
       const children = (item.children || [])
@@ -136,8 +135,7 @@ export class RoleReadRepository {
 
     const mapModule = (item: MenuItem): ModuleMap | null => {
       const availablePermissions = item.permissions || [];
-      const routeParts = item.route?.split('/').filter(part => part.length > 0) || [];
-      const moduleName = routeParts.length > 0 ? routeParts[routeParts.length - 1] : item.id;
+      const moduleName = item.id;
 
       const directPermissions = permissionsByModule[moduleName] || [];
       const children = (item.children || [])

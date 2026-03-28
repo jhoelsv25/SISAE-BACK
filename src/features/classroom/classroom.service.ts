@@ -1,8 +1,11 @@
+import { InjectQueue } from '@nestjs/bullmq';
 import { Injectable, Logger } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { InjectRepository } from '@nestjs/typeorm';
+import { Queue } from 'bullmq';
 import { In, Repository } from 'typeorm';
 import { ErrorHandler } from '../../common/exceptions';
+import { JOBS, QUEUE } from '../../infrastruture/queues';
 import { AssigmentEntity } from '../assigments/entities/assigment.entity';
 import { AssigmentQuestionEntity } from '../assigments/entities/assigment_question.entity';
 import { AssigmentQuestionOptionEntity } from '../assigments/entities/assigment_question_option.entity';
@@ -15,6 +18,8 @@ import { AssessmentScoreEntity } from '../assessment_scores/entities/assessment_
 import { AssessmentEntity } from '../assessments/entities/assessment.entity';
 import { AssessmentStatus, AssessmentType } from '../assessments/enums/assessment.enum';
 import { ChatMessageEntity } from '../chat_messages/entities/chat_message.entity';
+import { ChatParticipantEntity } from '../chat_participants/entities/chat_participant.entity';
+import { ChatParticipantRole } from '../chat_participants/enums/chat_participant.enum';
 import { ChatMessageType } from '../chat_messages/enums/chat_message.enum';
 import { ChatRoomType } from '../chat_rooms/enums/chat_room.enum';
 import { ChatRoomEntity } from '../chat_rooms/entities/chat_room.entity';
@@ -28,9 +33,15 @@ import { StudentEntity } from '../students/entities/student.entity';
 import { TeacherEntity } from '../teachers/entities/teacher.entity';
 import { UserEntity } from '../users/entities/user.entity';
 import { VirtualClassroomEntity } from '../virtual_classrooms/entities/virtual_classroom.entity';
+import { AppGateway } from '../../infrastruture/sockets/app.gatewat';
 import { ClassroomCommentEntity } from './entities/classroom-comment.entity';
 import { ClassroomPostEntity } from './entities/classroom-post.entity';
 import { TaskCommentEntity } from './entities/task-comment.entity';
+
+export interface PublishScheduledTaskJobPayload {
+  assignmentId: string;
+  sectionCourseId: string;
+}
 
 @Injectable()
 export class ClassroomService {
@@ -61,6 +72,8 @@ export class ClassroomService {
     private readonly periodRepo: Repository<PeriodEntity>,
     @InjectRepository(ChatMessageEntity)
     private readonly chatRepo: Repository<ChatMessageEntity>,
+    @InjectRepository(ChatParticipantEntity)
+    private readonly chatParticipantRepo: Repository<ChatParticipantEntity>,
     @InjectRepository(ChatRoomEntity)
     private readonly roomRepo: Repository<ChatRoomEntity>,
     @InjectRepository(EnrollmentEntity)
@@ -79,8 +92,11 @@ export class ClassroomService {
     private readonly sectionCourseRepo: Repository<SectionCourseEntity>,
     @InjectRepository(VirtualClassroomEntity)
     private readonly virtualClassroomRepo: Repository<VirtualClassroomEntity>,
+    @InjectQueue(QUEUE.CLASSROOM)
+    private readonly classroomQueue: Queue,
     private readonly assessmentConsolidationService: AssessmentConsolidationService,
     private readonly eventEmitter: EventEmitter2,
+    private readonly appGateway: AppGateway,
   ) {}
 
   private personFullName(person?: { firstName?: string; lastName?: string } | null) {
@@ -129,6 +145,121 @@ export class ClassroomService {
       const segment = url.split('/').filter(Boolean).pop();
       return segment || 'Recurso';
     }
+  }
+
+  private async getRealtimeRoomIds(sectionCourseId: string): Promise<string[]> {
+    const roomIds = new Set<string>([sectionCourseId]);
+    const classrooms = await this.virtualClassroomRepo.find({
+      where: { sectionCourse: { id: sectionCourseId } },
+      select: ['id'],
+    });
+
+    for (const classroom of classrooms) {
+      if (classroom.id) {
+        roomIds.add(classroom.id);
+      }
+    }
+
+    return [...roomIds];
+  }
+
+  private async emitFeedCreated(sectionCourseId: string, item: unknown) {
+    this.eventEmitter.emit('classroom.feed.created', {
+      roomIds: await this.getRealtimeRoomIds(sectionCourseId),
+      item,
+    });
+  }
+
+  private async emitFeedUpdated(sectionCourseId: string, item: unknown) {
+    this.eventEmitter.emit('classroom.feed.updated', {
+      roomIds: await this.getRealtimeRoomIds(sectionCourseId),
+      item,
+    });
+  }
+
+  private async emitFeedDeleted(sectionCourseId: string, id: string) {
+    this.eventEmitter.emit('classroom.feed.deleted', {
+      roomIds: await this.getRealtimeRoomIds(sectionCourseId),
+      id,
+    });
+  }
+
+  private async emitTaskUpdated(sectionCourseId: string, task: unknown) {
+    this.eventEmitter.emit('classroom.task.updated', {
+      roomIds: await this.getRealtimeRoomIds(sectionCourseId),
+      task,
+    });
+  }
+
+  private async emitTaskDeleted(sectionCourseId: string, id: string) {
+    this.eventEmitter.emit('classroom.task.deleted', {
+      roomIds: await this.getRealtimeRoomIds(sectionCourseId),
+      id,
+    });
+  }
+
+  private parsePublishAt(raw?: string | null) {
+    if (!raw?.trim()) return null;
+    const parsed = new Date(raw);
+    if (Number.isNaN(parsed.getTime())) {
+      throw new ErrorHandler('La fecha de publicación no es válida', 400);
+    }
+    return parsed;
+  }
+
+  private getTaskPublishJobId(assignmentId: string) {
+    return `classroom-task:${assignmentId}:publish`;
+  }
+
+  private async unscheduleTaskPublication(assignmentId: string) {
+    const job = await this.classroomQueue.getJob(this.getTaskPublishJobId(assignmentId));
+    if (job) {
+      await job.remove();
+    }
+  }
+
+  private async scheduleTaskPublication(assignmentId: string, sectionCourseId: string, publishAt: Date) {
+    const delay = Math.max(publishAt.getTime() - Date.now(), 0);
+    await this.classroomQueue.add(
+      JOBS.PUBLISH_SCHEDULED_TASK,
+      { assignmentId, sectionCourseId } as PublishScheduledTaskJobPayload,
+      {
+        jobId: this.getTaskPublishJobId(assignmentId),
+        delay,
+        removeOnComplete: 20,
+        removeOnFail: 20,
+      },
+    );
+  }
+
+  private async emitPublishedAssignment(sectionCourseId: string, assignment: AssigmentEntity, userId?: string) {
+    this.eventEmitter.emit('assignments.published', {
+      id: assignment.id,
+      title: assignment.title,
+      description: assignment.description ?? null,
+      sectionCourseId,
+      status: assignment.status,
+    });
+
+    const task = await this.getTaskRealtimeItem(sectionCourseId, assignment.id, userId);
+    if (task) {
+      await this.emitTaskUpdated(sectionCourseId, task);
+    }
+
+    const feedItem = await this.getAssignmentFeedItem(sectionCourseId, assignment.id, userId);
+    if (feedItem) {
+      await this.emitFeedCreated(sectionCourseId, feedItem);
+    }
+  }
+
+  private async getTaskRealtimeItem(sectionCourseId: string, assignmentId: string, userId?: string) {
+    const tasks = await this.getTasks(sectionCourseId, userId);
+    return tasks.find((item) => item.id === assignmentId);
+  }
+
+  private async getAssignmentFeedItem(sectionCourseId: string, assignmentId: string, userId?: string) {
+    const feed = await this.getFeed(sectionCourseId, userId);
+    return feed.data.find((item) => item.id === assignmentId && item.type === 'assignment');
   }
 
   private async resolveSectionCourseId(classroomId: string): Promise<string> {
@@ -262,6 +393,156 @@ export class ClassroomService {
     throw new ErrorHandler('No tienes acceso a esta aula virtual', 403);
   }
 
+  private async getUserContext(userId?: string) {
+    if (!userId) return null;
+
+    const user = await this.userRepo.findOne({
+      where: { id: userId },
+      relations: ['person', 'role'],
+    });
+
+    if (!user) return null;
+
+    return {
+      user,
+      roleName: String(user.role?.name ?? '').toLowerCase(),
+      personId: user.person?.id ?? null,
+    };
+  }
+
+  private async getAccessibleSectionCoursesForUser(userId?: string) {
+    const context = await this.getUserContext(userId);
+    if (!context?.personId) return [];
+
+    const allSectionCourses = await this.sectionCourseRepo.find({
+      relations: ['teacher', 'teacher.person', 'section', 'course', 'academicYear'],
+    });
+
+    if (this.isAdminLike(context.roleName)) {
+      return allSectionCourses;
+    }
+
+    if (this.isTeacherLike(context.roleName)) {
+      return allSectionCourses.filter(
+        (sectionCourse) => sectionCourse.teacher?.person?.id === context.personId,
+      );
+    }
+
+    if (this.isStudentLike(context.roleName)) {
+      const student = await this.studentRepo.findOne({
+        where: { person: { id: context.personId } },
+      });
+
+      if (!student) return [];
+
+      const enrollments = await this.enrollmentRepo.find({
+        where: { student: { id: student.id } },
+        relations: ['section', 'academicYear'],
+      });
+
+      const enrollmentKeys = new Set(
+        enrollments
+          .filter((item) => String(item.status ?? '').toLowerCase() === 'enrolled')
+          .map((item) => `${item.section?.id}:${item.academicYear?.id}`),
+      );
+
+      return allSectionCourses.filter((sectionCourse) =>
+        enrollmentKeys.has(`${sectionCourse.section?.id}:${sectionCourse.academicYear?.id}`),
+      );
+    }
+
+    if (this.isGuardianLike(context.roleName)) {
+      const guardian = await this.guardianRepo.findOne({
+        where: { person: { id: context.personId } },
+      });
+
+      if (!guardian) return [];
+
+      const guardianLinks = await this.studentGuardianRepo.find({
+        where: { guardian: { id: guardian.id } },
+        relations: ['student'],
+      });
+
+      const studentIds = guardianLinks.map((item) => item.student?.id).filter(Boolean) as string[];
+      if (!studentIds.length) return [];
+
+      const enrollments = await this.enrollmentRepo.find({
+        where: { student: { id: In(studentIds) } },
+        relations: ['section', 'academicYear'],
+      });
+
+      const enrollmentKeys = new Set(
+        enrollments
+          .filter((item) => String(item.status ?? '').toLowerCase() === 'enrolled')
+          .map((item) => `${item.section?.id}:${item.academicYear?.id}`),
+      );
+
+      return allSectionCourses.filter((sectionCourse) =>
+        enrollmentKeys.has(`${sectionCourse.section?.id}:${sectionCourse.academicYear?.id}`),
+      );
+    }
+
+    return [];
+  }
+
+  private async buildChatInboxItem(
+    currentUserId: string,
+    room: ChatRoomEntity,
+    sectionCourse?: SectionCourseEntity | null,
+    latestMessage?: ChatMessageEntity | null,
+  ) {
+    const safeSectionCourse =
+      sectionCourse ??
+      (await this.sectionCourseRepo.findOne({
+        where: { id: room.sectionCourse?.id },
+        relations: ['teacher', 'teacher.person', 'section', 'course', 'academicYear'],
+      }));
+
+    const roomMessage =
+      latestMessage ??
+      (await this.chatRepo.findOne({
+        where: { chatRoom: { id: room.id } },
+        relations: ['user', 'user.person'],
+        order: { createdAt: 'DESC', id: 'DESC' },
+      }));
+
+    const titleParts = [safeSectionCourse?.course?.name, safeSectionCourse?.section?.name]
+      .filter(Boolean)
+      .join(' · ');
+
+    const activityDate = roomMessage?.createdAt ?? room.createdAt ?? new Date();
+    const participant = await this.ensureChatParticipant(room.id, currentUserId);
+    const unreadCount = roomMessage
+      ? await this.chatRepo
+          .createQueryBuilder('message')
+          .innerJoin('message.chatRoom', 'chatRoom')
+          .where('chatRoom.id = :roomId', { roomId: room.id })
+          .andWhere('message.userId != :currentUserId', { currentUserId })
+          .andWhere(
+            participant.lastReadAt
+              ? 'message.createdAt > :lastReadAt'
+              : '1 = 1',
+            participant.lastReadAt ? { lastReadAt: participant.lastReadAt } : {},
+          )
+          .getCount()
+      : 0;
+
+    return {
+      id: room.id,
+      roomId: room.id,
+      sectionCourseId: safeSectionCourse?.id ?? room.sectionCourse?.id,
+      name: titleParts || room.name || 'Chat del aula',
+      avatar: safeSectionCourse?.teacher?.person?.photoUrl || null,
+      lastMessage: roomMessage?.content?.trim() || 'Sin mensajes todavía',
+      time: activityDate instanceof Date ? activityDate.toISOString() : new Date(activityDate).toISOString(),
+      unread: unreadCount > 0,
+      unreadCount,
+      online: false,
+      route: `/virtual-classroom/${safeSectionCourse?.id ?? room.sectionCourse?.id}/chat`,
+      type: 'classroom',
+    };
+  }
+
   private canManagePost(user: UserEntity | null | undefined, post: ClassroomPostEntity) {
     const roleName = String(user?.role?.name ?? '').toLowerCase();
     if (this.isAdminLike(roleName)) return true;
@@ -292,10 +573,16 @@ export class ClassroomService {
     return matched?.label;
   }
 
-  async getFeed(sectionCourseId: string, userId?: string) {
+  async getFeed(
+    sectionCourseId: string,
+    userId?: string,
+    params?: { cursorDate?: string; cursorId?: string; limit?: number; search?: string },
+  ) {
     try {
       const resolvedSectionCourseId = await this.resolveSectionCourseId(sectionCourseId);
       await this.ensureClassroomAccess(userId, resolvedSectionCourseId, 'view');
+      const limit = Math.min(Math.max(Number(params?.limit ?? 15), 1), 30);
+      const search = params?.search?.trim().toLowerCase() ?? '';
       const posts = await this.postRepo.find({
         where: { sectionCourse: { id: resolvedSectionCourseId } },
         relations: ['user', 'user.person', 'user.role', 'comments', 'comments.user', 'comments.user.person', 'comments.user.role'],
@@ -309,7 +596,7 @@ export class ClassroomService {
       });
 
       const assignments = await this.assignmentRepo.find({
-        where: { sectionCourse: { id: resolvedSectionCourseId } },
+        where: { sectionCourse: { id: resolvedSectionCourseId }, status: AssigmentStatus.PUBLISHED },
         relations: ['teacher', 'teacher.person'],
         order: { id: 'DESC' },
       });
@@ -373,9 +660,51 @@ export class ClassroomService {
           },
           commentsCount: 0
         }))
-      ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      ]
+        .sort((a, b) => {
+          const byDate = new Date(b.date).getTime() - new Date(a.date).getTime();
+          return byDate || String(b.id).localeCompare(String(a.id));
+        });
 
-      return { data: feed };
+      const filteredFeed = feed.filter((item) => {
+        if (!search) return true;
+        const title = 'title' in item ? item.title : undefined;
+        const attachments =
+          'metadata' in item && item.metadata?.attachments
+            ? item.metadata.attachments.map((attachment: { name?: string }) => attachment?.name)
+            : [];
+        return [
+          title,
+          item.content,
+          item.author?.name,
+          item.author?.role,
+          ...attachments,
+        ]
+          .filter(Boolean)
+          .some((value) => String(value).toLowerCase().includes(search));
+      });
+
+      const pagedFeed = filteredFeed.filter((item) => {
+        if (!params?.cursorDate || !params?.cursorId) return true;
+        const itemDate = new Date(item.date).getTime();
+        const cursorDate = new Date(params.cursorDate).getTime();
+        return itemDate < cursorDate || (itemDate === cursorDate && item.id < params.cursorId);
+      });
+
+      const data = pagedFeed.slice(0, limit);
+      const last = data[data.length - 1];
+
+      return {
+        data,
+        nextCursor:
+          pagedFeed.length > limit && last
+            ? {
+                date: new Date(last.date).toISOString(),
+                id: last.id,
+              }
+            : null,
+        hasNext: pagedFeed.length > limit,
+      };
     } catch (error) {
       if (error instanceof ErrorHandler) throw error;
       throw new ErrorHandler('Error al obtener feed: ' + error.message, 500);
@@ -424,7 +753,9 @@ export class ClassroomService {
     });
 
     await this.commentRepo.save(comment);
-    return this.getFeedItemByPostId(post.id);
+    const feedItem = await this.getFeedItemByPostId(post.id);
+    await this.emitFeedUpdated(resolvedSectionCourseId, feedItem);
+    return feedItem;
   }
 
   async updatePost(
@@ -459,7 +790,9 @@ export class ClassroomService {
     }
 
     await this.postRepo.save(post);
-    return this.getFeedItemByPostId(post.id);
+    const feedItem = await this.getFeedItemByPostId(post.id);
+    await this.emitFeedUpdated(resolvedSectionCourseId, feedItem);
+    return feedItem;
   }
 
   async deletePost(userId: string, sectionCourseId: string, postId: string) {
@@ -486,6 +819,7 @@ export class ClassroomService {
       .execute();
 
     await this.postRepo.remove(post);
+    await this.emitFeedDeleted(resolvedSectionCourseId, post.id);
     return { id: post.id, deleted: true };
   }
 
@@ -516,7 +850,9 @@ export class ClassroomService {
 
     comment.content = trimmed;
     await this.commentRepo.save(comment);
-    return this.getFeedItemByPostId(postId);
+    const feedItem = await this.getFeedItemByPostId(postId);
+    await this.emitFeedUpdated(resolvedSectionCourseId, feedItem);
+    return feedItem;
   }
 
   async deleteComment(userId: string, sectionCourseId: string, postId: string, commentId: string) {
@@ -539,7 +875,9 @@ export class ClassroomService {
     }
 
     await this.commentRepo.remove(comment);
-    return this.getFeedItemByPostId(postId);
+    const feedItem = await this.getFeedItemByPostId(postId);
+    await this.emitFeedUpdated(resolvedSectionCourseId, feedItem);
+    return feedItem;
   }
 
   async getFeedItemByPostId(postId: string) {
@@ -555,27 +893,135 @@ export class ClassroomService {
     return this.mapPostToFeedItem(post);
   }
 
-  async getChatHistory(sectionCourseId: string, userId?: string) {
+  async getChatHistory(
+    sectionCourseId: string,
+    userId?: string,
+    params?: { cursorDate?: string; cursorId?: string; limit?: number },
+  ) {
     try {
       const resolvedSectionCourseId = await this.resolveSectionCourseId(sectionCourseId);
       await this.ensureClassroomAccess(userId, resolvedSectionCourseId, 'view');
       const room = await this.roomRepo.findOne({ where: { sectionCourse: { id: resolvedSectionCourseId } } });
-      if (!room) return { data: [] };
+      if (!room) return { data: [], nextCursor: null, hasNext: false };
 
-      const messages = await this.chatRepo.find({
-        where: { chatRoom: { id: room.id } },
-        relations: ['user', 'user.person'],
-        order: { id: 'ASC' },
-        take: 50,
-      });
+      const limit = Math.min(Math.max(Number(params?.limit ?? 30), 1), 50);
+      const query = this.chatRepo
+        .createQueryBuilder('message')
+        .innerJoin('message.chatRoom', 'chatRoom')
+        .leftJoinAndSelect('message.user', 'user')
+        .leftJoinAndSelect('user.person', 'person')
+        .where('chatRoom.id = :roomId', { roomId: room.id })
+        .orderBy('message.createdAt', 'DESC')
+        .addOrderBy('message.id', 'DESC')
+        .limit(limit);
+
+      if (params?.cursorDate && params?.cursorId) {
+        query.andWhere(
+          '(message.createdAt < :cursorDate OR (message.createdAt = :cursorDate AND message.id < :cursorId))',
+          {
+            cursorDate: new Date(params.cursorDate),
+            cursorId: params.cursorId,
+          },
+        );
+      }
+
+      const messages = await query.getMany();
+      const oldestMessage = messages[messages.length - 1];
 
       return {
-        data: messages.map((message) => this.mapChatMessage(message))
+        data: messages.reverse().map((message) => this.mapChatMessage(message)),
+        nextCursor:
+          messages.length === limit && oldestMessage
+            ? {
+                date: oldestMessage.createdAt.toISOString(),
+                id: oldestMessage.id,
+              }
+            : null,
+        hasNext: messages.length === limit,
       };
     } catch (error) {
       if (error instanceof ErrorHandler) throw error;
       throw new ErrorHandler('Error al obtener chat: ' + error.message, 500);
     }
+  }
+
+  async getChatInbox(
+    userId: string | undefined,
+    params?: { cursorDate?: string; cursorId?: string; limit?: number; search?: string },
+  ) {
+    if (!userId) {
+      throw new ErrorHandler('No autorizado', 401);
+    }
+
+    const limit = Math.min(Math.max(Number(params?.limit ?? 12), 1), 25);
+    const search = params?.search?.trim().toLowerCase() ?? '';
+    const accessibleSectionCourses = await this.getAccessibleSectionCoursesForUser(userId);
+    if (!accessibleSectionCourses.length) {
+      return { data: [], nextCursor: null, hasNext: false };
+    }
+
+    const ensuredRooms = await Promise.all(
+      accessibleSectionCourses.map((sectionCourse) => this.ensureChatRoom(sectionCourse.id)),
+    );
+
+    const latestMessages = ensuredRooms.length
+      ? await this.chatRepo.find({
+          where: { chatRoom: { id: In(ensuredRooms.map((room) => room.id)) } },
+          relations: ['chatRoom', 'user', 'user.person'],
+          order: { createdAt: 'DESC', id: 'DESC' },
+        })
+      : [];
+
+    const latestByRoom = new Map<string, ChatMessageEntity>();
+    for (const message of latestMessages) {
+      const roomId = message.chatRoom?.id;
+      if (roomId && !latestByRoom.has(roomId)) {
+        latestByRoom.set(roomId, message);
+      }
+    }
+
+    const sectionCourseById = new Map(accessibleSectionCourses.map((item) => [item.id, item]));
+    const rows = await Promise.all(
+      ensuredRooms.map((room) =>
+        this.buildChatInboxItem(
+          userId,
+          room,
+          sectionCourseById.get(room.sectionCourse?.id),
+          latestByRoom.get(room.id),
+        ),
+      ),
+    );
+
+    const filteredRows = rows
+      .filter((item) => {
+        if (!search) return true;
+        return [item.name, item.lastMessage]
+          .filter(Boolean)
+          .some((value) => String(value).toLowerCase().includes(search));
+      })
+      .sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime() || String(b.id).localeCompare(String(a.id)));
+
+    const pagedRows = filteredRows.filter((item) => {
+      if (!params?.cursorDate || !params?.cursorId) return true;
+      const itemDate = new Date(item.time).getTime();
+      const cursorDate = new Date(params.cursorDate).getTime();
+      return itemDate < cursorDate || (itemDate === cursorDate && item.id < params.cursorId);
+    });
+
+    const data = pagedRows.slice(0, limit);
+    const last = data[data.length - 1];
+
+    return {
+      data,
+      nextCursor:
+        pagedRows.length > limit && last
+          ? {
+              date: last.time,
+              id: last.id,
+            }
+          : null,
+      hasNext: pagedRows.length > limit,
+    };
   }
 
   async saveMessage(userId: string, sectionCourseId: string, content: string) {
@@ -616,6 +1062,132 @@ export class ClassroomService {
       id: fullMessage?.id,
       ...this.mapChatMessage(fullMessage),
     };
+  }
+
+  async getChatAudienceUserIds(sectionCourseId: string) {
+    const resolvedSectionCourseId = await this.resolveSectionCourseId(sectionCourseId);
+    const sectionCourse = await this.sectionCourseRepo.findOne({
+      where: { id: resolvedSectionCourseId },
+      relations: ['teacher', 'teacher.person', 'section', 'academicYear'],
+    });
+
+    if (!sectionCourse?.section?.id || !sectionCourse.academicYear?.id) {
+      return [];
+    }
+
+    const enrollments = await this.enrollmentRepo.find({
+      where: {
+        section: { id: sectionCourse.section.id },
+        academicYear: { id: sectionCourse.academicYear.id },
+      },
+      relations: ['student', 'student.person'],
+    });
+
+    const activeEnrollments = enrollments.filter(
+      (item) => String(item.status ?? '').toLowerCase() === 'enrolled',
+    );
+
+    const studentIds = activeEnrollments.map((item) => item.student?.id).filter(Boolean) as string[];
+    const personIds = new Set<string>();
+
+    if (sectionCourse.teacher?.person?.id) {
+      personIds.add(sectionCourse.teacher.person.id);
+    }
+
+    for (const enrollment of activeEnrollments) {
+      if (enrollment.student?.person?.id) {
+        personIds.add(enrollment.student.person.id);
+      }
+    }
+
+    if (studentIds.length) {
+      const guardianLinks = await this.studentGuardianRepo.find({
+        where: { student: { id: In(studentIds) } },
+        relations: ['guardian', 'guardian.person'],
+      });
+
+      for (const link of guardianLinks) {
+        if (link.guardian?.person?.id) {
+          personIds.add(link.guardian.person.id);
+        }
+      }
+    }
+
+    if (!personIds.size) return [];
+
+    const users = await this.userRepo.find({
+      where: { person: { id: In(Array.from(personIds)) } },
+      relations: ['person'],
+    });
+
+    return [...new Set(users.map((item) => item.id).filter(Boolean))];
+  }
+
+  async emitChatInboxUpdates(sectionCourseId: string, senderUserId: string) {
+    const audienceUserIds = await this.getChatAudienceUserIds(sectionCourseId);
+    if (!audienceUserIds.length) return;
+
+    const payloads = await Promise.all(
+      audienceUserIds.map(async (recipientUserId) => ({
+        recipientUserId,
+        payload: await this.getChatInbox(recipientUserId, {
+          limit: 1,
+        }).then((response) => {
+          const matching = (response.data ?? []).find(
+            (item) => item.sectionCourseId === sectionCourseId || item.route?.includes(sectionCourseId),
+          );
+          return matching
+            ? {
+                ...matching,
+                unread:
+                  recipientUserId !== senderUserId
+                    ? true
+                    : matching.unread,
+                unreadCount:
+                  recipientUserId !== senderUserId
+                    ? Math.max(Number(matching.unreadCount ?? 0), 1)
+                    : Number(matching.unreadCount ?? 0),
+              }
+            : null;
+        }),
+      })),
+    );
+
+    for (const entry of payloads) {
+      if (!entry.payload) continue;
+      this.appGateway.server.to(`user:${entry.recipientUserId}`).emit('chat:inbox:update', entry.payload);
+    }
+  }
+
+  async markChatAsRead(userId: string | undefined, sectionCourseId: string) {
+    if (!userId) {
+      throw new ErrorHandler('No autorizado', 401);
+    }
+
+    const resolvedSectionCourseId = await this.resolveSectionCourseId(sectionCourseId);
+    await this.ensureClassroomAccess(userId, resolvedSectionCourseId, 'view');
+
+    const room = await this.ensureChatRoom(resolvedSectionCourseId);
+    const participant = await this.ensureChatParticipant(room.id, userId);
+    const latestMessage = await this.chatRepo.findOne({
+      where: { chatRoom: { id: room.id } },
+      order: { createdAt: 'DESC', id: 'DESC' },
+    });
+
+    participant.lastReadAt = latestMessage?.createdAt ?? new Date();
+    await this.chatParticipantRepo.save(participant);
+
+    const payload = await this.getChatInbox(userId, { limit: 1 }).then((response) =>
+      (response.data ?? []).find(
+        (item) => item.sectionCourseId === resolvedSectionCourseId || item.route?.includes(resolvedSectionCourseId),
+      ),
+    );
+
+    if (payload) {
+      this.appGateway.server.to(`user:${userId}`).emit('chat:inbox:update', payload);
+    }
+
+    return { success: true };
   }
 
   async getTeachers(sectionCourseId: string, userId?: string) {
@@ -753,8 +1325,11 @@ export class ClassroomService {
           roleName.includes('director') ||
           roleName.includes('docente') ||
           roleName.includes('teacher'));
+      const visibleAssignments = canViewAllStudents
+        ? assignments
+        : assignments.filter((assignment) => assignment.status === AssigmentStatus.PUBLISHED);
 
-      return assignments.map((assignment) => {
+      return visibleAssignments.map((assignment) => {
       const comments = taskComments
         .filter((comment) => comment.assigment?.id === assignment.id)
         .map((comment) => ({
@@ -823,6 +1398,9 @@ export class ClassroomService {
               label: option.label,
             })),
           })),
+          publicationStatus:
+            assignment.status === AssigmentStatus.DRAFT ? 'scheduled' : assignment.status,
+          publishAt: assignment.publishAt?.toISOString?.() ?? undefined,
           status: ownSubmission?.status ?? 'pending',
           points: assignment.maxScore,
           grade: ownSubmission?.score,
@@ -857,6 +1435,9 @@ export class ClassroomService {
             label: option.label,
           })),
         })),
+        publicationStatus:
+          assignment.status === AssigmentStatus.DRAFT ? 'scheduled' : assignment.status,
+        publishAt: assignment.publishAt?.toISOString?.() ?? undefined,
         status: gradedCount > 0 && pendingCount === 0 ? 'graded' : deliveredCount > 0 || gradedCount > 0 ? 'delivered' : 'pending',
         points: assignment.maxScore,
         studentSubmissions,
@@ -878,6 +1459,50 @@ export class ClassroomService {
     }
   }
 
+  async getTasksCursor(
+    sectionCourseId: string,
+    userId?: string,
+    params?: { cursorDate?: string; cursorId?: string; limit?: number; search?: string },
+  ) {
+    const tasks = await this.getTasks(sectionCourseId, userId);
+    const limit = Math.min(Math.max(Number(params?.limit ?? 12), 1), 24);
+    const search = params?.search?.trim().toLowerCase() ?? '';
+
+    const orderedTasks = [...tasks]
+      .filter((task) => {
+        if (!search) return true;
+        return [task.title, task.description, task.instructions, task.type, task.status]
+          .filter(Boolean)
+          .some((value) => String(value).toLowerCase().includes(search));
+      })
+      .sort((a, b) => {
+        const byDate = new Date(String(b.date ?? '')).getTime() - new Date(String(a.date ?? '')).getTime();
+        return byDate || String(b.id).localeCompare(String(a.id));
+      });
+
+    const pagedTasks = orderedTasks.filter((task) => {
+      if (!params?.cursorDate || !params?.cursorId) return true;
+      const itemDate = new Date(String(task.date ?? '')).getTime();
+      const cursorDate = new Date(params.cursorDate).getTime();
+      return itemDate < cursorDate || (itemDate === cursorDate && task.id < params.cursorId);
+    });
+
+    const data = pagedTasks.slice(0, limit);
+    const last = data[data.length - 1];
+
+    return {
+      data,
+      nextCursor:
+        pagedTasks.length > limit && last
+          ? {
+              date: new Date(String(last.date ?? new Date())).toISOString(),
+              id: last.id,
+            }
+          : null,
+      hasNext: pagedTasks.length > limit,
+    };
+  }
+
   async createTask(
     userId: string | undefined,
     sectionCourseId: string,
@@ -886,6 +1511,7 @@ export class ClassroomService {
       description?: string;
       instructions?: string;
       dueDate: string;
+      publishAt?: string;
       maxScore?: number;
       lateSubmissionAllowed?: boolean;
       maxAttempts?: number;
@@ -916,6 +1542,8 @@ export class ClassroomService {
     if (Number.isNaN(dueDate.getTime())) {
       throw new ErrorHandler('La fecha limite no es valida', 400);
     }
+    const publishAt = this.parsePublishAt(body.publishAt);
+    const shouldSchedule = Boolean(publishAt && publishAt.getTime() > Date.now());
 
     const sectionCourse = await this.sectionCourseRepo.findOne({
       where: { id: resolvedSectionCourseId },
@@ -937,8 +1565,10 @@ export class ClassroomService {
       description: body.description?.trim() || '',
       instructions: body.instructions?.trim() || body.description?.trim() || '',
       maxScore: Number(body.maxScore ?? 20),
-      assignedDate: new Date(),
+      assignedDate: shouldSchedule ? publishAt! : new Date(),
       dueDate,
+      publishAt,
+      publishedAt: shouldSchedule ? null : new Date(),
       lateSubmissionAllowed: body.lateSubmissionAllowed ?? true,
       latePenaltyPercentage: 0,
       type: Object.values(AssigmentType).includes(body.type as AssigmentType)
@@ -949,7 +1579,7 @@ export class ClassroomService {
       maxAttempts: Math.max(1, Number(body.maxAttempts ?? 1)),
       groupAssignment: false,
       rubricUrl: body.resourceUrl?.trim() || '',
-      status: AssigmentStatus.PUBLISHED,
+      status: shouldSchedule ? AssigmentStatus.DRAFT : AssigmentStatus.PUBLISHED,
       sectionCourse: { id: resolvedSectionCourseId },
       teacher: { id: teacher.id },
     });
@@ -1016,15 +1646,7 @@ export class ClassroomService {
       }
     }
 
-    this.eventEmitter.emit('assignments.published', {
-      id: saved.id,
-      title: saved.title,
-      description: saved.description ?? null,
-      sectionCourseId: resolvedSectionCourseId,
-      status: saved.status,
-    });
-
-    return {
+    const task = {
       id: saved.id,
       title: saved.title,
       description: saved.description,
@@ -1032,6 +1654,8 @@ export class ClassroomService {
       date: saved.dueDate,
       type: saved.type,
       resourceUrl: saved.rubricUrl || undefined,
+      publicationStatus: shouldSchedule ? 'scheduled' : saved.status,
+      publishAt: publishAt?.toISOString(),
       questionsCount: body.questions?.length ?? 0,
       status: 'pending',
       points: saved.maxScore,
@@ -1042,6 +1666,13 @@ export class ClassroomService {
         pendingCount: 0,
       },
     };
+    if (shouldSchedule) {
+      await this.scheduleTaskPublication(saved.id, resolvedSectionCourseId, publishAt!);
+      await this.emitTaskUpdated(resolvedSectionCourseId, task);
+    } else {
+      await this.emitPublishedAssignment(resolvedSectionCourseId, saved, userId);
+    }
+    return task;
   }
 
   async getTaskEditor(userId: string | undefined, sectionCourseId: string, assignmentId: string) {
@@ -1071,10 +1702,12 @@ export class ClassroomService {
       description: assignment.description,
       instructions: assignment.instructions,
       dueDate: assignment.dueDate,
+      publishAt: assignment.publishAt,
       maxScore: Number(assignment.maxScore ?? 20),
       maxAttempts: Number(assignment.maxAttempts ?? 1),
       lateSubmissionAllowed: assignment.lateSubmissionAllowed,
       type: assignment.type,
+      publicationStatus: assignment.status === AssigmentStatus.DRAFT ? 'scheduled' : assignment.status,
       resourceUrl: assignment.rubricUrl || '',
       questions: (assignment.questions ?? []).map((question) => ({
         id: question.id,
@@ -1100,6 +1733,7 @@ export class ClassroomService {
       description?: string;
       instructions?: string;
       dueDate: string;
+      publishAt?: string;
       maxScore?: number;
       lateSubmissionAllowed?: boolean;
       maxAttempts?: number;
@@ -1130,20 +1764,27 @@ export class ClassroomService {
     if (Number.isNaN(dueDate.getTime())) {
       throw new ErrorHandler('La fecha limite no es valida', 400);
     }
+    const publishAt = this.parsePublishAt(body.publishAt);
+    const shouldSchedule = Boolean(publishAt && publishAt.getTime() > Date.now());
 
     const nextType = Object.values(AssigmentType).includes(body.type as AssigmentType)
       ? (body.type as AssigmentType)
       : assignment.type;
+    const wasPublished = assignment.status === AssigmentStatus.PUBLISHED;
 
     assignment.title = body.title?.trim() || assignment.title;
     assignment.description = body.description?.trim() || '';
     assignment.instructions = body.instructions?.trim() || body.description?.trim() || '';
     assignment.dueDate = dueDate;
+    assignment.publishAt = publishAt;
+    assignment.assignedDate = shouldSchedule ? publishAt! : assignment.assignedDate ?? new Date();
+    assignment.publishedAt = shouldSchedule ? null : assignment.publishedAt ?? new Date();
     assignment.maxScore = Number(body.maxScore ?? assignment.maxScore ?? 20);
     assignment.maxAttempts = Math.max(1, Number(body.maxAttempts ?? assignment.maxAttempts ?? 1));
     assignment.lateSubmissionAllowed = body.lateSubmissionAllowed ?? assignment.lateSubmissionAllowed;
     assignment.type = nextType;
     assignment.rubricUrl = body.resourceUrl?.trim() || '';
+    assignment.status = shouldSchedule ? AssigmentStatus.DRAFT : AssigmentStatus.PUBLISHED;
 
     if (nextType === AssigmentType.QUIZ) {
       const activePeriod = await this.periodRepo.findOne({
@@ -1185,6 +1826,7 @@ export class ClassroomService {
     }
 
     const saved = await this.assignmentRepo.save(assignment);
+    await this.unscheduleTaskPublication(saved.id);
 
     if (assignment.questions?.length) {
       const optionIds = assignment.questions.flatMap((question) => (question.options ?? []).map((option) => option.id));
@@ -1228,7 +1870,31 @@ export class ClassroomService {
       }
     }
 
-    return this.getTaskEditor(userId, resolvedSectionCourseId, saved.id);
+    const editor = await this.getTaskEditor(userId, resolvedSectionCourseId, saved.id);
+    if (shouldSchedule) {
+      await this.scheduleTaskPublication(saved.id, resolvedSectionCourseId, publishAt!);
+      const task = await this.getTaskRealtimeItem(resolvedSectionCourseId, saved.id, userId);
+      if (task) {
+        await this.emitTaskUpdated(resolvedSectionCourseId, task);
+      }
+      if (wasPublished) {
+        await this.emitFeedDeleted(resolvedSectionCourseId, saved.id);
+      }
+    } else {
+      if (wasPublished) {
+        const task = await this.getTaskRealtimeItem(resolvedSectionCourseId, saved.id, userId);
+        if (task) {
+          await this.emitTaskUpdated(resolvedSectionCourseId, task);
+        }
+        const feedItem = await this.getAssignmentFeedItem(resolvedSectionCourseId, saved.id, userId);
+        if (feedItem) {
+          await this.emitFeedUpdated(resolvedSectionCourseId, feedItem);
+        }
+      } else {
+        await this.emitPublishedAssignment(resolvedSectionCourseId, saved, userId);
+      }
+    }
+    return editor;
   }
 
   async deleteTask(userId: string | undefined, sectionCourseId: string, assignmentId: string) {
@@ -1244,6 +1910,7 @@ export class ClassroomService {
       throw new ErrorHandler('Tarea no encontrada para eliminar', 404);
     }
 
+    await this.unscheduleTaskPublication(assignment.id);
     await this.assignmentRepo.softRemove(assignment);
 
     if (assignment.assessment?.id) {
@@ -1253,7 +1920,27 @@ export class ClassroomService {
       }
     }
 
+    await this.emitTaskDeleted(resolvedSectionCourseId, assignmentId);
+    await this.emitFeedDeleted(resolvedSectionCourseId, assignmentId);
     return { id: assignmentId, deleted: true };
+  }
+
+  async publishScheduledTask(payload: PublishScheduledTaskJobPayload) {
+    const assignment = await this.assignmentRepo.findOne({
+      where: { id: payload.assignmentId, sectionCourse: { id: payload.sectionCourseId } },
+      relations: ['teacher', 'teacher.person'],
+    });
+
+    if (!assignment || assignment.status !== AssigmentStatus.DRAFT) {
+      return null;
+    }
+
+    assignment.status = AssigmentStatus.PUBLISHED;
+    assignment.assignedDate = assignment.publishAt ?? new Date();
+    assignment.publishedAt = new Date();
+    await this.assignmentRepo.save(assignment);
+    await this.emitPublishedAssignment(payload.sectionCourseId, assignment);
+    return assignment;
   }
 
   async createTaskComment(userId: string, sectionCourseId: string, assignmentId: string, content: string) {
@@ -1275,7 +1962,11 @@ export class ClassroomService {
       user: { id: access.user.id },
     });
     await this.taskCommentRepo.save(comment);
-    return this.getTasks(resolvedSectionCourseId, userId).then((items) => items.find((item) => item.id === assignmentId));
+    const task = await this.getTaskRealtimeItem(resolvedSectionCourseId, assignmentId, userId);
+    if (task) {
+      await this.emitTaskUpdated(resolvedSectionCourseId, task);
+    }
+    return task;
   }
 
   async updateTaskComment(userId: string, sectionCourseId: string, assignmentId: string, commentId: string, content: string) {
@@ -1293,7 +1984,11 @@ export class ClassroomService {
     if (!this.canManageTaskComment(access.user, comment)) throw new ErrorHandler('No puedes editar este comentario', 403);
     comment.content = trimmed;
     await this.taskCommentRepo.save(comment);
-    return this.getTasks(resolvedSectionCourseId, userId).then((items) => items.find((item) => item.id === assignmentId));
+    const task = await this.getTaskRealtimeItem(resolvedSectionCourseId, assignmentId, userId);
+    if (task) {
+      await this.emitTaskUpdated(resolvedSectionCourseId, task);
+    }
+    return task;
   }
 
   async deleteTaskComment(userId: string, sectionCourseId: string, assignmentId: string, commentId: string) {
@@ -1306,7 +2001,11 @@ export class ClassroomService {
     if (!comment) throw new ErrorHandler('Comentario no encontrado', 404);
     if (!this.canManageTaskComment(access.user, comment)) throw new ErrorHandler('No puedes eliminar este comentario', 403);
     await this.taskCommentRepo.softRemove(comment);
-    return this.getTasks(resolvedSectionCourseId, userId).then((items) => items.find((item) => item.id === assignmentId));
+    const task = await this.getTaskRealtimeItem(resolvedSectionCourseId, assignmentId, userId);
+    if (task) {
+      await this.emitTaskUpdated(resolvedSectionCourseId, task);
+    }
+    return task;
   }
 
   async submitTask(
@@ -1405,6 +2104,10 @@ export class ClassroomService {
     if (quizResult?.autoGraded) {
       await this.syncAssessmentScore(assignment.assessment?.id, enrollment.id, quizResult.score, 'Quiz autoevaluado');
     }
+    const task = await this.getTaskRealtimeItem(resolvedSectionCourseId, assignmentId, userId);
+    if (task) {
+      await this.emitTaskUpdated(resolvedSectionCourseId, task);
+    }
     return {
       id: saved.id,
       status: this.mapSubmissionStatus(saved.status),
@@ -1447,6 +2150,10 @@ export class ClassroomService {
 
     const saved = await this.assignmentSubmissionRepo.save(submission);
     await this.syncAssessmentScore(submission.assigment?.assessment?.id, submission.enrollment?.id, Number(saved.score ?? 0), body.feedback);
+    const task = await this.getTaskRealtimeItem(resolvedSectionCourseId, assignmentId, userId);
+    if (task) {
+      await this.emitTaskUpdated(resolvedSectionCourseId, task);
+    }
     return {
       id: saved.id,
       score: saved.score,
@@ -1748,6 +2455,26 @@ export class ClassroomService {
     }
 
     return room;
+  }
+
+  private async ensureChatParticipant(roomId: string, userId: string) {
+    let participant = await this.chatParticipantRepo.findOne({
+      where: { chatRoom: { id: roomId }, user: { id: userId } },
+    });
+
+    if (!participant) {
+      participant = this.chatParticipantRepo.create({
+        chatRoom: { id: roomId },
+        user: { id: userId },
+        joinDate: new Date(),
+        lastReadAt: null as any,
+        isMuted: false,
+        role: ChatParticipantRole.MEMBER,
+      });
+      participant = await this.chatParticipantRepo.save(participant);
+    }
+
+    return participant;
   }
 
   private mapChatMessage(message: ChatMessageEntity | null) {

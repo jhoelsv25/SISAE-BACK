@@ -1,5 +1,5 @@
 import { JwtAuthGuard } from '@auth/guards/jwt-auth.guard';
-import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Patch, Post, Request, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Patch, Post, Query, Request, UseGuards } from '@nestjs/common';
 import { ClassroomService } from './classroom.service';
 
 const SectionCourseIdParam = () => Param('sectionCourseId', new ParseUUIDPipe({ version: '4' }));
@@ -12,14 +12,46 @@ export class ClassroomController {
 
   @UseGuards(JwtAuthGuard)
   @Get('feed/:sectionCourseId')
-  getFeed(@Request() req: any, @SectionCourseIdParam() sectionId: string) {
-    return this.classroomService.getFeed(sectionId, req.user?.id);
+  getFeed(
+    @Request() req: any,
+    @SectionCourseIdParam() sectionId: string,
+    @Query() query: { cursorDate?: string; cursorId?: string; limit?: string; search?: string },
+  ) {
+    return this.classroomService.getFeed(sectionId, req.user?.id, {
+      ...query,
+      limit: query.limit ? Number(query.limit) : undefined,
+    });
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('chat-inbox')
+  getChatInbox(
+    @Request() req: any,
+    @Query() query: { cursorDate?: string; cursorId?: string; limit?: string; search?: string },
+  ) {
+    return this.classroomService.getChatInbox(req.user?.id, {
+      ...query,
+      limit: query.limit ? Number(query.limit) : undefined,
+    });
   }
 
   @UseGuards(JwtAuthGuard)
   @Get('chat/:sectionCourseId')
-  getChat(@Request() req: any, @SectionCourseIdParam() sectionId: string) {
-    return this.classroomService.getChatHistory(sectionId, req.user?.id);
+  getChat(
+    @Request() req: any,
+    @SectionCourseIdParam() sectionId: string,
+    @Query() query: { cursorDate?: string; cursorId?: string; limit?: string },
+  ) {
+    return this.classroomService.getChatHistory(sectionId, req.user?.id, {
+      ...query,
+      limit: query.limit ? Number(query.limit) : undefined,
+    });
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('chat/:sectionCourseId/read')
+  markChatAsRead(@Request() req: any, @SectionCourseIdParam() sectionId: string) {
+    return this.classroomService.markChatAsRead(req.user?.id, sectionId);
   }
 
   @UseGuards(JwtAuthGuard)
@@ -38,6 +70,19 @@ export class ClassroomController {
   @Get(':sectionCourseId/tasks')
   getTasks(@Request() req: any, @SectionCourseIdParam() sectionId: string) {
     return this.classroomService.getTasks(sectionId, req.user?.id);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get(':sectionCourseId/tasks-cursor')
+  getTasksCursor(
+    @Request() req: any,
+    @SectionCourseIdParam() sectionId: string,
+    @Query() query: { cursorDate?: string; cursorId?: string; limit?: string; search?: string },
+  ) {
+    return this.classroomService.getTasksCursor(sectionId, req.user?.id, {
+      ...query,
+      limit: query.limit ? Number(query.limit) : undefined,
+    });
   }
 
   @UseGuards(JwtAuthGuard)
@@ -206,6 +251,7 @@ export class ClassroomController {
       description?: string;
       instructions?: string;
       dueDate: string;
+      publishAt?: string;
       maxScore?: number;
       lateSubmissionAllowed?: boolean;
       maxAttempts?: number;
@@ -235,6 +281,7 @@ export class ClassroomController {
       description?: string;
       instructions?: string;
       dueDate: string;
+      publishAt?: string;
       maxScore?: number;
       lateSubmissionAllowed?: boolean;
       maxAttempts?: number;

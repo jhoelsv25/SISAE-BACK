@@ -34,6 +34,7 @@ import { PersonsModule } from './persons/persons.module';
 import { RolesModule } from './roles/roles.module';
 import { ReportsModule } from './reports/reports.module';
 import { SchedulesModule } from './schedules/schedules.module';
+import { SearchModule } from './search/search.module';
 import { SectionCourseModule } from './section-course/section-course.module';
 import { SectionsModule } from './sections/sections.module';
 import { SessionsModule } from './sessions/sessions.module';
@@ -65,6 +66,7 @@ import { VirtualClassroomsModule } from './virtual_classrooms/virtual_classrooms
     NotificationsModule,
     AttendancesModule,
     SchedulesModule,
+    SearchModule,
     EnrollmentsModule,
     PaymentsModule,
     TeacherAttendancesModule,

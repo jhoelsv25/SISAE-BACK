@@ -31,9 +31,25 @@ export class AssessmentScoresService {
 
   async findAll(filter: any) {
     try {
-      const assessmentScores = await this.repo.find({ where: filter });
+      const { assessment, enrollment, ...rest } = filter ?? {};
+      const where: Record<string, unknown> = { ...rest };
+
+      if (assessment) {
+        where.assessment = { id: assessment };
+      }
+
+      if (enrollment) {
+        where.enrollment = { id: enrollment };
+      }
+
+      const assessmentScores = await this.repo.find({
+        where,
+        relations: ['assessment', 'enrollment', 'enrollment.student', 'enrollment.student.person'],
+        order: { createdAt: 'DESC' },
+      });
       return { message: 'Lista de assessment scores', data: assessmentScores };
-    } catch (error) {
+    } catch (error: any) {
+      console.error('Error finding assessment scores with filter', filter, error?.message ?? error);
       throw new ErrorHandler('Ocurrió un error al obtener la lista de assessment scores', 500);
     }
   }

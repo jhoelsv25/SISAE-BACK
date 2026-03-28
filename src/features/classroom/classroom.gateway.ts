@@ -1,4 +1,5 @@
 import { Logger, UnauthorizedException } from '@nestjs/common';
+import { OnEvent } from '@nestjs/event-emitter';
 import { JwtService } from '@nestjs/jwt';
 import {
   ConnectedSocket,
@@ -87,6 +88,7 @@ export class ClassroomGateway implements OnGatewayInit, OnGatewayConnection, OnG
 
     const saved = await this.classroomService.sendChatMessage(userId, data.room, data.message.content.trim());
     this.server.to(data.room).emit('newMessage', saved);
+    await this.classroomService.emitChatInboxUpdates(data.room, userId);
     return saved;
   }
 
@@ -107,7 +109,42 @@ export class ClassroomGateway implements OnGatewayInit, OnGatewayConnection, OnG
       data.post.attachmentUrl,
     );
     const feedItem = await this.classroomService.getFeedItemByPostId(created.id);
-    this.server.to(data.room).emit('feedUpdate', feedItem);
+    this.server.to(data.room).emit('feedCreated', feedItem);
     return feedItem;
+  }
+
+  @OnEvent('classroom.feed.created')
+  handleFeedCreated(payload: { roomIds: string[]; item: unknown }) {
+    for (const roomId of payload.roomIds) {
+      this.server.to(roomId).emit('feedCreated', payload.item);
+    }
+  }
+
+  @OnEvent('classroom.feed.updated')
+  handleFeedUpdated(payload: { roomIds: string[]; item: unknown }) {
+    for (const roomId of payload.roomIds) {
+      this.server.to(roomId).emit('feedUpdated', payload.item);
+    }
+  }
+
+  @OnEvent('classroom.feed.deleted')
+  handleFeedDeleted(payload: { roomIds: string[]; id: string }) {
+    for (const roomId of payload.roomIds) {
+      this.server.to(roomId).emit('feedDeleted', { id: payload.id });
+    }
+  }
+
+  @OnEvent('classroom.task.updated')
+  handleTaskUpdated(payload: { roomIds: string[]; task: unknown }) {
+    for (const roomId of payload.roomIds) {
+      this.server.to(roomId).emit('taskUpdated', payload.task);
+    }
+  }
+
+  @OnEvent('classroom.task.deleted')
+  handleTaskDeleted(payload: { roomIds: string[]; id: string }) {
+    for (const roomId of payload.roomIds) {
+      this.server.to(roomId).emit('taskDeleted', { id: payload.id });
+    }
   }
 }
